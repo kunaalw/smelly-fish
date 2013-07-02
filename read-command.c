@@ -530,6 +530,49 @@ token** complete_command_divider (token* input_token_stream, int* num_commands)
   return tokenized_command_array;
 }
 
+// @Avinash: Follow this style for generating commands from tokens -Kunaal
+command_t make_single_command (token* tokenized_command)
+{
+  token* first_token = tokenized_command;
+  token* current_token = tokenized_command;
+  command_t return_command = NULL;
+
+  while(current_token != NULL)
+    {
+      if((current_token->type == OR_TOKEN) || (current_token->type == AND_TOKEN))
+	{
+	  return_command = (command_t) checked_malloc(sizeof(command_t));
+	  if (current_token->type == OR_TOKEN) return_command->type = OR_COMMAND;
+	  if (current_token->type == AND_TOKEN) return_command->type = AND_COMMAND;
+	  token* left_branch;
+	  token* right_branch;
+
+	  // Taking care of the left branch
+	  if (current_token->prev_token == NULL) throw_error("ERROR: Malformed expression - boolean without preceding expression");
+	  else
+	    {
+	      (current_token->prev_token)->next_token = NULL;
+	      left_branch = first_token;
+	    }
+
+	  // Taking care of the right branch
+	  if (current_token->next_token == NULL) throw_error("ERROR: Malformed expression - boolean without succeeding expression");
+	  else
+	    {
+	      right_branch = current_token->next_token;
+	      right_branch->prev_token = NULL;
+	    }
+
+	  return_command->u.command[0] = make_single_command(left_branch);
+	  return_command->u.command[1] = make_single_command(right_branch);
+
+	  return return_command;
+	}
+      else current_token = current_token->next_token;
+    }
+
+  return return_command;
+}
 
 
 command_stream_t

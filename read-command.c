@@ -398,19 +398,25 @@ void clean_token_stream (token* input_token_stream)
 	    }
 	  // If succeeded by anything other than (, ) or a word - BOOM!! ERROR!!
 	  else if ((input_token_stream->next_token != NULL) &&
-		   ((input_token_stream->next_token)->type != SIMPLE_TOKEN) && ((input_token_stream->next_token)->type != SUBSHELL_OPEN_TOKEN) && ((input_token_stream->next_token)->type != SUBSHELL_CLOSE_TOKEN))
+		   ((input_token_stream->next_token)->type != SIMPLE_TOKEN) && 
+		   ((input_token_stream->next_token)->type != SUBSHELL_OPEN_TOKEN) && 
+		   ((input_token_stream->next_token)->type != SUBSHELL_CLOSE_TOKEN))
 	    {
 	      char* error_message = "ERROR: Malformed expression - unexpected preceding newline character";
 	      //throw_error(error_message);
 	    }
 	  // If preceeded by <, > - BOOM!! ERROR!!
-	  else if ((input_token_stream->prev_token != NULL) && (((input_token_stream->prev_token)->type == REDIRECT_LEFT_TOKEN) || ((input_token_stream->prev_token)->type == REDIRECT_RIGHT_TOKEN)))
+	  else if ((input_token_stream->prev_token != NULL) && 
+		   (((input_token_stream->prev_token)->type == REDIRECT_LEFT_TOKEN) || 
+		    ((input_token_stream->prev_token)->type == REDIRECT_RIGHT_TOKEN)))
 	    {
 	      char* error_message = "ERROR: Malformed expression - unexpected succeeding newline character";
 	      //throw_error(error_message);
 	    }
 	  // If preceeeded by anything other than a simple word, delete the newline!
-	   else if ((input_token_stream->prev_token != NULL) && ((input_token_stream->prev_token)->type != SIMPLE_TOKEN))
+	  else if ((input_token_stream->prev_token != NULL) && 
+		   ((input_token_stream->prev_token)->type != SIMPLE_TOKEN) && 
+		   ((input_token_stream->prev_token)->type != SUBSHELL_CLOSE_TOKEN))
 	    {
 	      token* delete_token = input_token_stream;
 	      if (input_token_stream->prev_token != NULL)
@@ -557,7 +563,8 @@ command_t make_single_command (token* tokenized_command)
       token* last_token = current_token;
       while (last_token->next_token != NULL)
 	last_token = last_token->next_token;
-      
+      printf("The last token is of type: ");
+      token_type_printer(last_token);
       if(last_token->type == SUBSHELL_CLOSE_TOKEN)
 	{
 	  token* last_in_subshell = last_token->prev_token;

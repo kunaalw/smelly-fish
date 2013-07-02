@@ -1,3 +1,7 @@
+(a && c) && d
+
+a && c && (d && (e && f) && h)
+
 true
 
 g++ -c foo.c

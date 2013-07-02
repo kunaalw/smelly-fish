@@ -537,34 +537,44 @@ command_t make_single_command (token* tokenized_command)
   token* current_token = tokenized_command;
   command_t return_command = NULL;
 
+  // Subshell command?
+  if(current_token->type == SUBSHELL_OPEN_TOKEN)
+    {
+      int counter = 1; 		
+      token* subshell_first = current_token->next_token;
+      while(current_token != NULL)
+	{
+	  if(current_token->type == SUBSHELL_OPEN_TOKEN)
+	    counter++;
+	  if(current_token->type == SUBSHELL_CLOSE_TOKEN)
+	    counter--;
+	  if(counter == 0)
+	    break;
+	  current_token=current_token->next_token;
+	}
+      if (counter != 0) throw_error("ERROR: Parenthesis mismatch");
+      token* last_in_subshell = current_token->prev_token;
+      token* first_in_subshell = first_token->next_token;
+      first_in_subshell->prev_token = NULL;
+      last_in_subshell->next_token = NULL;
 
-//Try to find a subshell
+      return_command = (command_t) checked_malloc(sizeof(struct command));
 
-while(current_token!=NULL)
-{
-			if(current_token->type == SUBSHELL_OPEN_TOKEN)
-		{
-		int counter = 1; 		
-		token* subshell_first = current_token->next;
-		while(current_token->next!=NULL)
-		{
-		if(current_token->next==SUBSHELL_OPEN_TOKEN)
-			counter++;
-		if(current_token->next==SUBSHELL_CLOSE_TOKEN)
-			counter--;
-		current_token=current_token->next;
-		if(counter==0)
-			break;
-		}
-		current_token->next=NULL;
-		return_command = (command_t) checked_malloc(sizeof(struct command));
-		return_command->type = SUBSHELL_COMMAND;
+      command_t ret_subshell_command = (command_t) checked_malloc(sizeof(struct command));
+      ret_subshell_command = make_single_command(first_in_subshell);
 
-		return_command=make_single_command (subshell_first);
-		}
-}
-current_token=first_token;
+      return_command->type = SUBSHELL_COMMAND;
+      return_command->u.subshell_command = ret_subshell_command;
+      return_command->status = -1;
+      return_command->input = NULL;
+      return_command->output = NULL;
+      
+      return return_command;
+    }
+
+
   // Try to find an AND or an OR:
+  current_token = first_token;
   while(current_token != NULL)
     {
       if((current_token->type == OR_TOKEN) || (current_token->type == AND_TOKEN))

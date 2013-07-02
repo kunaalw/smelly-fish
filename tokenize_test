@@ -15,9 +15,6 @@ a b<c > d #this comment should be ignored!!!! #### these should be ## ignored to
 
 cat < /etc/passwd | tr a-z A-Z | sort -u > out || echo sort failed!
 
-a&&b||
- c &&
-  d | e && f|
 
 g<h
 

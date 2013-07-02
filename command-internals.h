@@ -39,4 +39,5 @@ struct command
 struct command_stream
 {
   command_t *command_array;
+  int num_commands;
 };

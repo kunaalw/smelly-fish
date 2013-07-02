@@ -117,6 +117,11 @@ token *make_simple_token (token* input_prev_token, char* input_token_content, in
   token* return_token = (token*) checked_malloc(sizeof(token));
   return_token->type = SIMPLE_TOKEN;
   return_token->curr.simple_token.word_length = input_token_length;
+
+  // ###############################################################################################################
+  // ##############################_REMOVE_TRAILING_WHITESPACES_FROM_WORDS_#########################################
+  // ###############################################################################################################
+
   return_token->curr.simple_token.word_content = (char*) checked_malloc(sizeof(char)*input_token_length);
   //*return_token->curr.simple_token.word_content = *input_token_content;
   strcpy(return_token->curr.simple_token.word_content, input_token_content);
@@ -644,7 +649,6 @@ command_t make_single_command (token* tokenized_command)
 	  return_command->status = -1;
 	  return_command->input = NULL;
 	  return_command->output = NULL;
-
 	  return return_command;
 	}
       else current_token = current_token->next_token;
@@ -696,7 +700,6 @@ command_t make_single_command (token* tokenized_command)
 	  return_command->status = -1;
 	  return_command->input = NULL;
 	  return_command->output = NULL;
-
 	  return return_command;
 	}
       else current_token = current_token->next_token;
@@ -759,11 +762,20 @@ make_command_stream (int (*get_next_byte) (void *),
 
   // Create commands from tokens
   int j = 0;
-  command_stream_t created_commands = (command_stream_t) checked_malloc(sizeof(struct command_stream)*num_commands);
+
+
+  command_t* command_list = (command_t*) checked_malloc(sizeof(command_t)*num_commands);
+
   for (j; j < num_commands; j++)
     {
-      created_commands->command_array[j] = make_single_command(tokenized_command_array[j]);
+      printf("<<-----COMMMAND #%d----->\n", (j+1)); //------------------------------------------------------
+      command_list[j] = make_single_command(tokenized_command_array[j]);
+      printf("<<-----LASTCOMP #%d----->\n", (j+1)); //------------------------------------------------------
     }
+
+  command_stream_t created_commands = (command_stream_t) checked_malloc(sizeof(struct command_stream));
+  created_commands->command_array = command_list;
+  created_commands->num_commands = num_commands;
   printf("Tokenized command array created\n\n\n");
 
   /*
@@ -786,7 +798,22 @@ make_command_stream (int (*get_next_byte) (void *),
 command_t
 read_command_stream (command_stream_t s)
 {
-  /* FIXME: Replace this with your implementation too.  */
-  error (1, 0, "command reading not yet implemented");
+  if (s == NULL) return 0;
+  else
+    {
+      if (s->num_commands == 0) return 0;
+      else 
+	{
+	  command_t return_command = s->command_array[0];
+	  int i = 0;
+	  for (i; i < (s->num_commands)-1; i++)
+	    {
+	      s->command_array[i] = s->command_array[i+1];
+	    }
+	  //free(s->commands_array[(s->num_commands)-1]);
+	  s->num_commands--;
+	  return return_command;
+	}
+    }
   return 0;
 }

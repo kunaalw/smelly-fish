@@ -757,6 +757,16 @@ make_command_stream (int (*get_next_byte) (void *),
   // !!! END TEST CODE !!!
 
 
+  // Create commands from tokens
+  int j = 0;
+  command_stream_t created_commands = (command_stream_t) checked_malloc(sizeof(struct command_stream)*num_commands);
+  for (j; j < num_commands; j++)
+    {
+      created_commands->command_array[j] = make_single_command(tokenized_command_array[j]);
+    }
+  printf("Tokenized command array created\n\n\n");
+
+  /*
   // DEALLOCATE (III) HERE - TOKENIZED COMMANDS
   free(tokenized_command_array);
   
@@ -769,7 +779,8 @@ make_command_stream (int (*get_next_byte) (void *),
       free(current_delete_token);
       current_delete_token = temp_token;
     }
-  return 0;
+  */
+  return created_commands;
 }
 
 command_t

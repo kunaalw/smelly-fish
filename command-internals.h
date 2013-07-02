@@ -34,3 +34,9 @@ struct command
     struct command *subshell_command;
   } u;
 };
+
+// Data associated with a command stream
+struct command_stream
+{
+  command_t *command_array;
+};

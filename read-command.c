@@ -128,10 +128,6 @@ token *make_simple_token (token* input_prev_token, char* input_token_content, in
   // Write new null terminator
   *(end+1) = 0;
 
-
-  // ###############################################################################################################
-  // ##############################_REMOVE_TRAILING_WHITESPACES_FROM_WORDS_#########################################
-  // ###############################################################################################################
   return_token->curr.simple_token.word_length = input_token_length;
   return_token->curr.simple_token.word_content = (char*) checked_malloc(sizeof(char)*input_token_length);
   //*return_token->curr.simple_token.word_content = *input_token_content;
@@ -549,52 +545,67 @@ token** complete_command_divider (token* input_token_stream, int* num_commands)
 // @Avinash: Follow this style for generating commands from tokens -Kunaal
 command_t make_single_command (token* tokenized_command)
 {
+  printf("Make new command\n");
   token* first_token = tokenized_command;
+  token* first_non_subshell_token = tokenized_command;
   token* current_token = tokenized_command;
   command_t return_command = NULL;
 
   // Subshell command?
   if(current_token->type == SUBSHELL_OPEN_TOKEN)
     {
-      int counter = 0; 		
-      token* subshell_first = current_token->next_token;
-      while(current_token != NULL)
-	{
-	  if(current_token->type == SUBSHELL_OPEN_TOKEN)
-	    counter++;
-	  if(current_token->type == SUBSHELL_CLOSE_TOKEN)
-	    counter--;
-	  if(counter == 0)
-	    break;
-	  current_token=current_token->next_token;
-	}
-      if (counter != 0) 
-	{
-	  printf("The number of mismatched parans is: %d", counter);
-	  throw_error("ERROR: Parenthesis mismatch");
-	}
-      token* last_in_subshell = current_token->prev_token;
-      token* first_in_subshell = first_token->next_token;
-      first_in_subshell->prev_token = NULL;
-      last_in_subshell->next_token = NULL;
-
-      return_command = (command_t) checked_malloc(sizeof(struct command));
-
-      command_t ret_subshell_command = (command_t) checked_malloc(sizeof(struct command));
-      ret_subshell_command = make_single_command(first_in_subshell);
-
-      return_command->type = SUBSHELL_COMMAND;
-      return_command->u.subshell_command = ret_subshell_command;
-      return_command->status = -1;
-      return_command->input = NULL;
-      return_command->output = NULL;
+      token* last_token = current_token;
+      while (last_token->next_token != NULL)
+	last_token = last_token->next_token;
       
-      return return_command;
+      if(last_token->type == SUBSHELL_CLOSE_TOKEN)
+	{
+	  token* last_in_subshell = last_token->prev_token;
+	  token* first_in_subshell = first_token->next_token;
+	  first_in_subshell->prev_token = NULL;
+	  last_in_subshell->next_token = NULL;
+	  
+	  return_command = (command_t) checked_malloc(sizeof(struct command));
+	  
+	  command_t ret_subshell_command = (command_t) checked_malloc(sizeof(struct command));
+	  ret_subshell_command = make_single_command(first_in_subshell);
+	  
+	  return_command->type = SUBSHELL_COMMAND;
+	  return_command->u.subshell_command = ret_subshell_command;
+	  return_command->status = -1;
+	  return_command->input = NULL;
+	  return_command->output = NULL;
+	  printf("Goes in the subshell if statement\n");
+	  return return_command;
+	}
+
+      else 
+	{
+	  current_token = first_token;
+	  int counter = 0; 		
+	  token* subshell_first = current_token->next_token;
+	  while(current_token != NULL)
+	    {
+	      if(current_token->type == SUBSHELL_OPEN_TOKEN)
+		counter++;
+	      if(current_token->type == SUBSHELL_CLOSE_TOKEN)
+		counter--;
+	      token_type_printer(current_token);
+	      printf("Right now the counter is %d\n\n", counter);
+	      if(counter == 0)
+		{
+		  printf("It should break here\n");
+		  break;
+		}
+	      current_token=current_token->next_token;
+	    }
+	  first_non_subshell_token = current_token->prev_token;
+	}
     }
 
 
   // Try to find an AND or an OR:
-  current_token = first_token;
+  current_token = first_non_subshell_token;
   while(current_token != NULL)
     {
       if((current_token->type == OR_TOKEN) || (current_token->type == AND_TOKEN))
@@ -633,7 +644,7 @@ command_t make_single_command (token* tokenized_command)
     }
 
   // Couldn't find an AND/OR... bleh! Maybe a PIPE instead?
-  current_token = first_token;
+  current_token = first_non_subshell_token;
   while(current_token != NULL)
     {
       if(current_token->type == PIPE_TOKEN)
@@ -670,7 +681,7 @@ command_t make_single_command (token* tokenized_command)
     }
 
   // Go for redirect!!
-  current_token = first_token;
+  current_token = first_non_subshell_token;
   while(current_token != NULL)
     {
       if(current_token->type == REDIRECT_LEFT_TOKEN || current_token->type == REDIRECT_RIGHT_TOKEN)
@@ -701,7 +712,7 @@ command_t make_single_command (token* tokenized_command)
 
 
   // Try to find a word aka SIMPLE_TOKEN!
-  current_token = first_token;
+  current_token = first_non_subshell_token;
   while(current_token != NULL)
     {
       if(current_token->type == SIMPLE_TOKEN)

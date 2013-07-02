@@ -537,6 +537,33 @@ command_t make_single_command (token* tokenized_command)
   token* current_token = tokenized_command;
   command_t return_command = NULL;
 
+
+//Try to find a subshell
+
+while(current_token!=NULL)
+{
+			if(current_token->type == SUBSHELL_OPEN_TOKEN)
+		{
+		int counter = 1; 		
+		token* subshell_first = current_token->next;
+		while(current_token->next!=NULL)
+		{
+		if(current_token->next==SUBSHELL_OPEN_TOKEN)
+			counter++;
+		if(current_token->next==SUBSHELL_CLOSE_TOKEN)
+			counter--;
+		current_token=current_token->next;
+		if(counter==0)
+			break;
+		}
+		current_token->next=NULL;
+		return_command = (command_t) checked_malloc(sizeof(struct command));
+		return_command->type = SUBSHELL_COMMAND;
+
+		return_command=make_single_command (subshell_first);
+		}
+}
+current_token=first_token;
   // Try to find an AND or an OR:
   while(current_token != NULL)
     {

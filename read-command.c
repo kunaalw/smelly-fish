@@ -541,7 +541,7 @@ command_t make_single_command (token* tokenized_command)
     {
       if((current_token->type == OR_TOKEN) || (current_token->type == AND_TOKEN))
 	{
-	  return_command = (command_t) checked_malloc(sizeof(command_t));
+	  return_command = (command_t) checked_malloc(sizeof(command_t));  // ********************ALLOCATION PROBLEM ******************************
 	  if (current_token->type == OR_TOKEN) return_command->type = OR_COMMAND;
 	  if (current_token->type == AND_TOKEN) return_command->type = AND_COMMAND;
 	  token* left_branch;

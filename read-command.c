@@ -116,12 +116,23 @@ token *make_simple_token (token* input_prev_token, char* input_token_content, in
   // ## Deallocation should occur before end of make_command_stream ##
   token* return_token = (token*) checked_malloc(sizeof(token));
   return_token->type = SIMPLE_TOKEN;
-  return_token->curr.simple_token.word_length = input_token_length;
+  
+  // Trim trailing space
+  char* end = input_token_content + strlen(input_token_content) - 1;
+  while(end > input_token_content && isspace(*end)) 
+    {
+      end--;
+      input_token_length--;
+    }
+  
+  // Write new null terminator
+  *(end+1) = 0;
+
 
   // ###############################################################################################################
   // ##############################_REMOVE_TRAILING_WHITESPACES_FROM_WORDS_#########################################
   // ###############################################################################################################
-
+  return_token->curr.simple_token.word_length = input_token_length;
   return_token->curr.simple_token.word_content = (char*) checked_malloc(sizeof(char)*input_token_length);
   //*return_token->curr.simple_token.word_content = *input_token_content;
   strcpy(return_token->curr.simple_token.word_content, input_token_content);
@@ -545,7 +556,7 @@ command_t make_single_command (token* tokenized_command)
   // Subshell command?
   if(current_token->type == SUBSHELL_OPEN_TOKEN)
     {
-      int counter = 1; 		
+      int counter = 0; 		
       token* subshell_first = current_token->next_token;
       while(current_token != NULL)
 	{
@@ -557,7 +568,11 @@ command_t make_single_command (token* tokenized_command)
 	    break;
 	  current_token=current_token->next_token;
 	}
-      if (counter != 0) throw_error("ERROR: Parenthesis mismatch");
+      if (counter != 0) 
+	{
+	  printf("The number of mismatched parans is: %d", counter);
+	  throw_error("ERROR: Parenthesis mismatch");
+	}
       token* last_in_subshell = current_token->prev_token;
       token* first_in_subshell = first_token->next_token;
       first_in_subshell->prev_token = NULL;

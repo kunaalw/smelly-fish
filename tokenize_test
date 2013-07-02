@@ -1,7 +1,5 @@
 
 
-
-
 g++ -c | 
 
 
@@ -9,7 +7,12 @@ g++ -c |
 
 foo.c : : :
 
-cat > /etc/passwd | tr a-z A-Z | sort -u || echo sort failed!
+
+c && a
+
+
+echo < cow
+
 
 a b<c > d #this comment should be ignored!!!! #### these should be ## ignored too!
 

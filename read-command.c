@@ -702,37 +702,6 @@ command_t make_single_command (token* tokenized_command)
 	}
       else current_token = current_token->next_token;
     }
-  /*
-  // Go for redirect!!
-  current_token = first_non_subshell_token;
-  while(current_token != NULL)
-    {
-      if(current_token->type == REDIRECT_LEFT_TOKEN || current_token->type == REDIRECT_RIGHT_TOKEN)
-	{ 
-	  if ((current_token->next_token == NULL) || (current_token->prev_token == NULL)) throw_error("ERROR: Malformed expression - bad redirection - null");
-
-	  return_command = (command_t) checked_malloc(sizeof(struct command));
-	  return_command->type = SIMPLE_COMMAND;
-	  
-	  return_command->u.word = (char**) checked_malloc(sizeof(char*));
-	  token* statement_token = current_token->prev_token;
-	  token* in_out_token = current_token->next_token;
-
-	  if ((statement_token->type != SIMPLE_TOKEN) || (in_out_token->type != SIMPLE_TOKEN)) throw_error("ERROR: Malformed expression - bad redirection - illegal symbols");
-	  
-	  return_command->u.word[0] = (statement_token->curr).simple_token.word_content;
-	  return_command->status = -1;
-
-	  return_command->input = NULL;
-	  return_command->output = NULL;
-	  if (current_token->type == REDIRECT_LEFT_TOKEN) return_command->input = (in_out_token->curr).simple_token.word_content;
-	  if (current_token->type == REDIRECT_RIGHT_TOKEN) return_command->output = (in_out_token->curr).simple_token.word_content;
-
-	  return return_command;
-	}
-      else current_token = current_token->next_token;
-    }
-  */
 
   // Try to find a word aka SIMPLE_TOKEN!
   current_token = first_non_subshell_token;
@@ -789,12 +758,12 @@ command_t make_single_command (token* tokenized_command)
 			redirect_flag = 1;
 		      }
 		}
+	      if (current_token->next_token != NULL) throw_error("ERROR: Bad command received!");
 	    }
 	  return return_command;
 	}
       else current_token = current_token->next_token;
     }
-  throw_error("ERROR: Bad command received!");
   return return_command; // If it ever gets here - it's an empty command!
 }
 

@@ -213,6 +213,7 @@ int buffer_tokenize
 token *make_token_stream (int (*get_next_byte) (void *),
 		     void *get_next_byte_argument)
 {
+  printf("GETGO POINT\n");
   char in_char;
   token *first_token = NULL;
   token *curr_minus_one_token = NULL;
@@ -341,17 +342,16 @@ token *make_token_stream (int (*get_next_byte) (void *),
 	  sprintf(error_message,  "ERROR: Malformed expression - the character '%c' is illegal", in_char);
 	  throw_error(error_message);
 	}
-
       // Set the head of the list
       if ((is_first_token == 0) && (curr_token != NULL))
 	{
+	  printf("meeeee\n");
 	  first_token = curr_token;
 	  is_first_token = 1;
 	}
     }
 
   buffer_tokenize('~', buffer, &buffer_type, &buffer_size, &curr_token, &curr_minus_one_token, &is_first_token, &first_token);
-  
   if (delta_left_right_paren != 0)
     {
       char* error_message = "ERROR: Malformed expression - parenthesis mismatch";
@@ -360,6 +360,7 @@ token *make_token_stream (int (*get_next_byte) (void *),
   
   free(buffer);
   if (first_token == NULL) printf("WARNING: No tokens could be generated from the given input\n");
+  printf("beeeeee\n");
   return first_token;
 }
 
@@ -412,7 +413,7 @@ void clean_token_stream (token* input_token_stream)
 		    ((input_token_stream->prev_token)->type == REDIRECT_RIGHT_TOKEN)))
 	    {
 	      char* error_message = "ERROR: Malformed expression - unexpected succeeding newline character";
-	      //throw_error(error_message);
+	      throw_error(error_message);
 	    }
 	  // If preceeeded by anything other than a simple word, delete the newline!
 	  else if ((input_token_stream->prev_token != NULL) && 
@@ -741,6 +742,7 @@ command_t make_single_command (token* tokenized_command)
 		  return_command->input = (char*) checked_malloc(sizeof(char)*(current_token->curr.simple_token.word_length));
 
 		  return_command->input = strncpy((return_command->input),(current_token->curr.simple_token.word_content),(current_token->curr.simple_token.word_length));
+		  return_command->input[(current_token->curr.simple_token.word_length)] = '\0';
 		  redirect_flag = 1;
 		}
 	      if (current_token->next_token != NULL)
@@ -761,6 +763,7 @@ command_t make_single_command (token* tokenized_command)
 			return_command->output = (char*) checked_malloc(sizeof(char)*(current_token->curr.simple_token.word_length));
 			
 			return_command->output = strncpy((return_command->output),(current_token->curr.simple_token.word_content),(current_token->curr.simple_token.word_length));
+			return_command->output[(current_token->curr.simple_token.word_length)] = '\0';
 			redirect_flag = 1;
 		      }
 		}
@@ -771,6 +774,17 @@ command_t make_single_command (token* tokenized_command)
 	}
       else current_token = current_token->next_token;
     }
+
+  // Try to find a redirect - SHIT ON IT IF YOU FIND IT!!
+  current_token = first_non_subshell_token;
+  while(current_token != NULL)
+    {
+      if((current_token->type == REDIRECT_LEFT_TOKEN) || (current_token->type == REDIRECT_RIGHT_TOKEN))
+	{
+	  throw_error("ERROR: I FOUND A SHITTING REDIRECT JUST SITTING BY ITS OWN SHITTING SELF");
+	}
+    }
+  
   if (return_command == NULL) throw_error("ERROR: Empty command");
   return return_command; // If it ever gets here - it's an empty command!
 }
@@ -783,6 +797,7 @@ make_command_stream (int (*get_next_byte) (void *),
 		     void *get_next_byte_argument)
 {
   token *first_token = make_token_stream (get_next_byte, get_next_byte_argument);
+  
   while((first_token != NULL) && (first_token->type == NEWLINE_TOKEN || first_token->type == SEQUENCE_TOKEN))
     {
       token* delete_token = first_token;
@@ -792,9 +807,9 @@ make_command_stream (int (*get_next_byte) (void *),
       first_token = first_token->next_token;
       free(delete_token);
     }
-  clean_token_stream(first_token);
+  
  
-  /*
+  
   // !!! TEST TOKENIZER CODE !!! (remove before submission)
   token *current_token = first_token;
   while(current_token != NULL)
@@ -805,7 +820,8 @@ make_command_stream (int (*get_next_byte) (void *),
     }
   printf("Tokenizing complete\n\n\n");
   // !!! END TEST CODE !!!
-  */
+ 
+  clean_token_stream(first_token);
 
   int num_commands;
   token** tokenized_command_array = complete_command_divider(first_token, &num_commands);
@@ -815,10 +831,10 @@ make_command_stream (int (*get_next_byte) (void *),
   for (i; i < num_commands; i++)
     {
       token *current_token = tokenized_command_array[i];
-      //printf("\n\n *** COMMAND %d *** \n", (i+1));
+      printf("\n\n *** COMMAND %d *** \n", (i+1));
       while(current_token != NULL)
 	{
-	  //token_type_printer(current_token);
+	  token_type_printer(current_token);
 	  token *temp_token = current_token->next_token;
 	  current_token = temp_token;
 	}

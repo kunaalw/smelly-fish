@@ -495,6 +495,22 @@ void clean_token_stream (token* input_token_stream)
 	  input_token_stream = input_token_stream->next_token;
 	}
     }
+
+  input_token_stream = stored_token_stream;
+  /*// Malformed clean-up
+  while (input_token_stream != NULL)
+    {
+      printf("Stuck here\n");
+      if ((input_token_stream->type == REDIRECT_LEFT_TOKEN) || (input_token_stream->type == REDIRECT_RIGHT_TOKEN))
+	{
+	  if ((input_token_stream->next_token == NULL) || input_token_stream->prev_token == NULL)
+	    throw_error("ERROR: Bad redirection - missing word");
+	  else if (((input_token_stream->next_token)->type != SIMPLE_TOKEN) || ((input_token_stream->prev_token)->type != SIMPLE_TOKEN))
+	    throw_error("ERROR: Unexpected token before or after redirection");
+	}
+      input_token_stream = input_token_stream->next_token;
+    }
+  */
 }
 
 
@@ -686,7 +702,7 @@ command_t make_single_command (token* tokenized_command)
 	}
       else current_token = current_token->next_token;
     }
-
+  /*
   // Go for redirect!!
   current_token = first_non_subshell_token;
   while(current_token != NULL)
@@ -716,7 +732,7 @@ command_t make_single_command (token* tokenized_command)
 	}
       else current_token = current_token->next_token;
     }
-
+  */
 
   // Try to find a word aka SIMPLE_TOKEN!
   current_token = first_non_subshell_token;
@@ -733,11 +749,47 @@ command_t make_single_command (token* tokenized_command)
 	  return_command->status = -1;
 	  return_command->input = NULL;
 	  return_command->output = NULL;
+	  int redirect_flag = 0;
+	  
+	  if (current_token->next_token != NULL)
+	    {
+	      if ((current_token->next_token)->type == REDIRECT_LEFT_TOKEN)
+		{
+		  if ((current_token->next_token)->next_token == NULL)
+		    throw_error("ERROR: Left redirection empty"); 
+		  
+		  if (((current_token->next_token)->next_token)->type != SIMPLE_TOKEN)
+		    throw_error("ERROR: Left redirection not followed by a simple token");
+		  
+		  current_token = (current_token->next_token)->next_token;
+
+		  return_command->input = (char*) checked_malloc(sizeof(char)*(current_token->curr.simple_token.word_length));
+
+		  return_command->input = strncpy((return_command->input),(current_token->curr.simple_token.word_content),(current_token->curr.simple_token.word_length));
+		  redirect_flag = 1;
+		}
+	      
+	      if ((current_token->next_token)->type == REDIRECT_RIGHT_TOKEN)
+		{
+		  if ((current_token->next_token)->next_token == NULL)
+		    throw_error("ERROR: Right redirection empty"); 
+		  
+		  if (((current_token->next_token)->next_token)->type != SIMPLE_TOKEN)
+		    throw_error("ERROR: Right redirection not followed by a simple token");
+		  
+		  current_token = (current_token->next_token)->next_token;
+		  
+		  return_command->output = (char*) checked_malloc(sizeof(char)*(current_token->curr.simple_token.word_length));
+		  
+		  return_command->output = strncpy((return_command->output),(current_token->curr.simple_token.word_content),(current_token->curr.simple_token.word_length));
+		  redirect_flag = 1;
+		}
+	    }
 	  return return_command;
 	}
       else current_token = current_token->next_token;
     }
-
+  throw_error("ERROR: Bad command received!");
   return return_command; // If it ever gets here - it's an empty command!
 }
 

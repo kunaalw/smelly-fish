@@ -713,8 +713,9 @@ command_t make_single_command (token* tokenized_command)
 	  return_command = (command_t) checked_malloc(sizeof(struct command));
 	  return_command->type = SIMPLE_COMMAND;
 	  
-	  return_command->u.word = (char**) checked_malloc(sizeof(char*));
+	  return_command->u.word = (char**) checked_malloc(sizeof(char*)*2);  //******************MAGIC NUMBER ALERT***************************
 	  return_command->u.word[0] = (current_token->curr).simple_token.word_content;
+	  return_command->u.word[1] = NULL;
 
 	  return_command->status = -1;
 	  return_command->input = NULL;
@@ -775,7 +776,6 @@ command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
 		     void *get_next_byte_argument)
 {
-  printf("-----------Point 1-----------");
   token *first_token = make_token_stream (get_next_byte, get_next_byte_argument);
   while((first_token != NULL) && (first_token->type == NEWLINE_TOKEN || first_token->type == SEQUENCE_TOKEN))
     {

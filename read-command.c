@@ -213,7 +213,6 @@ int buffer_tokenize
 token *make_token_stream (int (*get_next_byte) (void *),
 		     void *get_next_byte_argument)
 {
-  printf("GETGO POINT\n");
   char in_char;
   token *first_token = NULL;
   token *curr_minus_one_token = NULL;
@@ -345,7 +344,6 @@ token *make_token_stream (int (*get_next_byte) (void *),
       // Set the head of the list
       if ((is_first_token == 0) && (curr_token != NULL))
 	{
-	  printf("meeeee\n");
 	  first_token = curr_token;
 	  is_first_token = 1;
 	}
@@ -360,18 +358,50 @@ token *make_token_stream (int (*get_next_byte) (void *),
   
   free(buffer);
   if (first_token == NULL) printf("WARNING: No tokens could be generated from the given input\n");
-  printf("beeeeee\n");
   return first_token;
 }
 
 void clean_token_stream (token* input_token_stream)
 {
   // Newline clean-up
-  
-
   token* stored_token_stream = input_token_stream;
+
+  input_token_stream = stored_token_stream;
+  // Sequence (semicolon) clean-up (delete empty semicolons)
   while (input_token_stream != NULL)
     {
+      if (input_token_stream->type == SEQUENCE_TOKEN)
+	{
+	  if (input_token_stream->prev_token == NULL) 
+	    throw_error("ERROR: Semicolon without command");
+	  
+	  if (((input_token_stream->prev_token)->type == SEQUENCE_TOKEN) || ((input_token_stream->prev_token)->type == NEWLINE_TOKEN))
+	    throw_error("ERROR: Semicolon with blankspace before");
+	}
+      input_token_stream = input_token_stream->next_token;
+    }
+
+
+  input_token_stream = stored_token_stream;
+  // Redirects clean-up (delete empty semicolons)
+  while (input_token_stream != NULL)
+    {
+      if (input_token_stream->type == REDIRECT_LEFT_TOKEN || input_token_stream->type == REDIRECT_RIGHT_TOKEN)
+	{
+	  if (input_token_stream->prev_token == NULL || input_token_stream->next_token == NULL) 
+	    throw_error("ERROR: Badly formatted redirection - no input and/or output");
+	  
+	  if (((input_token_stream->prev_token)->type != SIMPLE_TOKEN) || ((input_token_stream->next_token)->type != SIMPLE_TOKEN))
+	    throw_error("ERROR: Badley formatted redirection - non-word input and/or output");
+	}
+      input_token_stream = input_token_stream->next_token;
+    }
+
+
+  input_token_stream = stored_token_stream;
+  while (input_token_stream != NULL)
+    {
+      
       if (input_token_stream->type == NEWLINE_TOKEN)
 	{
 	  // If begins with a newline, delete newline
@@ -405,7 +435,7 @@ void clean_token_stream (token* input_token_stream)
 		   ((input_token_stream->next_token)->type != SUBSHELL_CLOSE_TOKEN))
 	    {
 	      char* error_message = "ERROR: Malformed expression - unexpected preceding newline character";
-	      //throw_error(error_message);
+	      throw_error(error_message);
 	    }
 	  // If preceeded by <, > - BOOM!! ERROR!!
 	  else if ((input_token_stream->prev_token != NULL) && 
@@ -814,11 +844,11 @@ make_command_stream (int (*get_next_byte) (void *),
   token *current_token = first_token;
   while(current_token != NULL)
     {
-      token_type_printer(current_token);
+      //token_type_printer(current_token);
       token *temp_token = current_token->next_token;
       current_token = temp_token;
     }
-  printf("Tokenizing complete\n\n\n");
+  //printf("Tokenizing complete\n\n\n");
   // !!! END TEST CODE !!!
  
   clean_token_stream(first_token);
@@ -831,10 +861,10 @@ make_command_stream (int (*get_next_byte) (void *),
   for (i; i < num_commands; i++)
     {
       token *current_token = tokenized_command_array[i];
-      printf("\n\n *** COMMAND %d *** \n", (i+1));
+      //printf("\n\n *** COMMAND %d *** \n", (i+1));
       while(current_token != NULL)
 	{
-	  token_type_printer(current_token);
+	  //token_type_printer(current_token);
 	  token *temp_token = current_token->next_token;
 	  current_token = temp_token;
 	}

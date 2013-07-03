@@ -602,6 +602,7 @@ command_t make_single_command (token* tokenized_command)
 	  return_command->input = NULL;
 	  return_command->output = NULL;
 	  //printf("Goes in the subshell if statement\n");
+	  if (return_command == NULL) throw_error("ERROR: Empty command");
 	  return return_command;
 	}
 
@@ -662,6 +663,7 @@ command_t make_single_command (token* tokenized_command)
 	  return_command->input = NULL;
 	  return_command->output = NULL;
 
+	  if (return_command == NULL) throw_error("ERROR: Empty command");
 	  return return_command;
 	}
       else current_token = current_token->next_token;
@@ -699,6 +701,8 @@ command_t make_single_command (token* tokenized_command)
 	  return_command->status = -1;
 	  return_command->input = NULL;
 	  return_command->output = NULL;
+
+	  if (return_command == NULL) throw_error("ERROR: Empty command");
 	  return return_command;
 	}
       else current_token = current_token->next_token;
@@ -762,10 +766,12 @@ command_t make_single_command (token* tokenized_command)
 		}
 	      if (current_token->next_token != NULL) throw_error("ERROR: Bad command received!");
 	    }
+	  if (return_command == NULL) throw_error("ERROR: Empty command");
 	  return return_command;
 	}
       else current_token = current_token->next_token;
     }
+  if (return_command == NULL) throw_error("ERROR: Empty command");
   return return_command; // If it ever gets here - it's an empty command!
 }
 

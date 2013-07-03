@@ -583,7 +583,7 @@ command_t make_single_command (token* tokenized_command)
       token* last_token = current_token;
       while (last_token->next_token != NULL)
 	last_token = last_token->next_token;
-      printf("The last token is of type: ");
+      //printf("The last token is of type: ");
       if(last_token->type == SUBSHELL_CLOSE_TOKEN)
 	{
 	  token* last_in_subshell = last_token->prev_token;
@@ -601,7 +601,7 @@ command_t make_single_command (token* tokenized_command)
 	  return_command->status = -1;
 	  return_command->input = NULL;
 	  return_command->output = NULL;
-	  printf("Goes in the subshell if statement\n");
+	  //printf("Goes in the subshell if statement\n");
 	  return return_command;
 	}
 

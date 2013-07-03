@@ -59,7 +59,7 @@ struct token
 
 void throw_error (char* error_message)
 {
-  printf("%s", error_message);
+  fprintf(stderr, "%s", error_message);
   printf("\n");
   exit(EXIT_FAILURE);
 }

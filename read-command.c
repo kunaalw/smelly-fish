@@ -125,6 +125,7 @@ token *make_simple_token (token* input_prev_token, char* input_token_content, in
       input_token_length--;
     }
   
+  if (input_token_length == 0) throw_error("ERROR: word expected ; not found");
   // Write new null terminator
   *(end+1) = 0;
 
@@ -232,7 +233,7 @@ token *make_token_stream (int (*get_next_byte) (void *),
 
   while ((in_char = get_next_byte(get_next_byte_argument)) != EOF)
     {
-      printf("%c",in_char);
+      //printf("%c",in_char);
       if (in_char == '#')
 	{
 	  while ((in_char = get_next_byte(get_next_byte_argument)) != '\n');
@@ -365,6 +366,8 @@ token *make_token_stream (int (*get_next_byte) (void *),
 void clean_token_stream (token* input_token_stream)
 {
   // Newline clean-up
+  
+
   token* stored_token_stream = input_token_stream;
   while (input_token_stream != NULL)
     {
@@ -376,8 +379,6 @@ void clean_token_stream (token* input_token_stream)
 	      token* delete_token = input_token_stream;
 	      input_token_stream = input_token_stream->next_token;
 	      stored_token_stream = input_token_stream;
-	      printf("\n\n\nGETS HERE\n\n\n");
-
 	      if (input_token_stream->next_token != NULL)
 		(input_token_stream->next_token)->prev_token = NULL;
 	     
@@ -473,13 +474,17 @@ void clean_token_stream (token* input_token_stream)
 	    }
 	  // If succeeded by anything other than (, ) or a word - BOOM!! ERROR!!
 	  else if ((input_token_stream->next_token != NULL) &&
-		   ((input_token_stream->next_token)->type != SIMPLE_TOKEN) && ((input_token_stream->next_token)->type != SUBSHELL_OPEN_TOKEN) && ((input_token_stream->next_token)->type != SUBSHELL_CLOSE_TOKEN))
+		   ((input_token_stream->next_token)->type != SIMPLE_TOKEN) && 
+		   ((input_token_stream->next_token)->type != SUBSHELL_OPEN_TOKEN) && 
+		   ((input_token_stream->next_token)->type != SUBSHELL_CLOSE_TOKEN))
 	    {
 	      char* error_message = "ERROR: Malformed expression - unexpected preceding sequence character";
 	      throw_error(error_message);
 	    }
 	  // If preceeded by <, > - BOOM!! ERROR!!
-	  else if ((input_token_stream->prev_token != NULL) && (((input_token_stream->prev_token)->type == REDIRECT_LEFT_TOKEN) || ((input_token_stream->prev_token)->type == REDIRECT_RIGHT_TOKEN)))
+	  else if ((input_token_stream->prev_token != NULL) && 
+		   (((input_token_stream->prev_token)->type == REDIRECT_LEFT_TOKEN) || 
+		    ((input_token_stream->prev_token)->type == REDIRECT_RIGHT_TOKEN)))
 	    {
 	      char* error_message = "ERROR: Malformed expression - unexpected succeeding sequence character";
 	      throw_error(error_message);
@@ -567,7 +572,6 @@ token** complete_command_divider (token* input_token_stream, int* num_commands)
 // @Avinash: Follow this style for generating commands from tokens -Kunaal
 command_t make_single_command (token* tokenized_command)
 {
-  printf("Make new command\n");
   token* first_token = tokenized_command;
   token* first_non_subshell_token = tokenized_command;
   token* current_token = tokenized_command;
@@ -580,7 +584,6 @@ command_t make_single_command (token* tokenized_command)
       while (last_token->next_token != NULL)
 	last_token = last_token->next_token;
       printf("The last token is of type: ");
-      token_type_printer(last_token);
       if(last_token->type == SUBSHELL_CLOSE_TOKEN)
 	{
 	  token* last_in_subshell = last_token->prev_token;
@@ -614,10 +617,8 @@ command_t make_single_command (token* tokenized_command)
 	      if(current_token->type == SUBSHELL_CLOSE_TOKEN)
 		counter--;
 	      token_type_printer(current_token);
-	      printf("Right now the counter is %d\n\n", counter);
 	      if(counter == 0)
 		{
-		  printf("It should break here\n");
 		  break;
 		}
 	      current_token=current_token->next_token;
@@ -774,6 +775,7 @@ command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
 		     void *get_next_byte_argument)
 {
+  printf("-----------Point 1-----------");
   token *first_token = make_token_stream (get_next_byte, get_next_byte_argument);
   while((first_token != NULL) && (first_token->type == NEWLINE_TOKEN || first_token->type == SEQUENCE_TOKEN))
     {
@@ -807,15 +809,15 @@ make_command_stream (int (*get_next_byte) (void *),
   for (i; i < num_commands; i++)
     {
       token *current_token = tokenized_command_array[i];
-      printf("\n\n *** COMMAND %d *** \n", (i+1));
+      //printf("\n\n *** COMMAND %d *** \n", (i+1));
       while(current_token != NULL)
 	{
-	  token_type_printer(current_token);
+	  //token_type_printer(current_token);
 	  token *temp_token = current_token->next_token;
 	  current_token = temp_token;
 	}
     }
-  printf("Tokenized command array created\n\n\n");
+  if (num_commands == 0) throw_error ("ERROR: No commands");
   // !!! END TEST CODE !!!
 
 
@@ -827,15 +829,13 @@ make_command_stream (int (*get_next_byte) (void *),
 
   for (j; j < num_commands; j++)
     {
-      printf("<<-----COMMMAND #%d----->\n", (j+1)); //------------------------------------------------------
       command_list[j] = make_single_command(tokenized_command_array[j]);
-      printf("<<-----LASTCOMP #%d----->\n", (j+1)); //------------------------------------------------------
     }
 
   command_stream_t created_commands = (command_stream_t) checked_malloc(sizeof(struct command_stream));
   created_commands->command_array = command_list;
   created_commands->num_commands = num_commands;
-  printf("Tokenized command array created\n\n\n");
+  //printf("Tokenized command array created\n\n\n");
 
   /*
   // DEALLOCATE (III) HERE - TOKENIZED COMMANDS

@@ -768,21 +768,26 @@ command_t make_single_command (token* tokenized_command)
 		  return_command->input = strncpy((return_command->input),(current_token->curr.simple_token.word_content),(current_token->curr.simple_token.word_length));
 		  redirect_flag = 1;
 		}
-	      
-	      if ((current_token->next_token)->type == REDIRECT_RIGHT_TOKEN)
+	      if (current_token->next_token != NULL)
 		{
-		  if ((current_token->next_token)->next_token == NULL)
-		    throw_error("ERROR: Right redirection empty"); 
-		  
-		  if (((current_token->next_token)->next_token)->type != SIMPLE_TOKEN)
-		    throw_error("ERROR: Right redirection not followed by a simple token");
-		  
-		  current_token = (current_token->next_token)->next_token;
-		  
-		  return_command->output = (char*) checked_malloc(sizeof(char)*(current_token->curr.simple_token.word_length));
-		  
-		  return_command->output = strncpy((return_command->output),(current_token->curr.simple_token.word_content),(current_token->curr.simple_token.word_length));
-		  redirect_flag = 1;
+		  if (((current_token->next_token)->type != REDIRECT_RIGHT_TOKEN))
+		    throw_error("ERROR: Word followed by illegal token");
+		    
+		    if ((current_token->next_token)->type == REDIRECT_RIGHT_TOKEN)
+		      {
+			if ((current_token->next_token)->next_token == NULL)
+			  throw_error("ERROR: Right redirection empty"); 
+			
+			if (((current_token->next_token)->next_token)->type != SIMPLE_TOKEN)
+			  throw_error("ERROR: Right redirection not followed by a simple token");
+			
+			current_token = (current_token->next_token)->next_token;
+			
+			return_command->output = (char*) checked_malloc(sizeof(char)*(current_token->curr.simple_token.word_length));
+			
+			return_command->output = strncpy((return_command->output),(current_token->curr.simple_token.word_content),(current_token->curr.simple_token.word_length));
+			redirect_flag = 1;
+		      }
 		}
 	    }
 	  return return_command;

@@ -44,12 +44,13 @@ switch(c->type)
     case PIPE_COMMAND:
       execute_pipe(c);
       break;
+    case SIMPLE_COMMAND:
+      execute_redirect(c);
+      break;
 	/*
 	case SEQUENCE_COMMAND:
       execute_sequence(c);
     break;
-	
-    case SIMPLE_COMMAND:
     case SUBSHELL_COMMAND:
       execute_redirect(c);
       break;

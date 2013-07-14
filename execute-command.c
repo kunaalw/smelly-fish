@@ -24,8 +24,10 @@ no_tt(c);
 
 else
 timetravel (c);
-	
+
+/*
   error (1, 0, "you shouldn't really get here");
+  */
 }
 
 void no_tt(command_t c)

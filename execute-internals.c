@@ -2,6 +2,7 @@
 #include "command-internals.h"
 #include "execute-internals.h"
 #include <error.h>
+#include <stdio.h>
 /*
 Functions/vars used
 pid_t
@@ -189,7 +190,36 @@ void execute_redirect(command_t c)
 	}
 	
 	else
+	{
+	switch (c->type) 
+   {
+    case AND_COMMAND:
+		printf("Command is: AND_COMMAND\n");
+		break;
+    case SEQUENCE_COMMAND:
+		printf("Command is: SEQUENCE_COMMAND\n");
+		break;
+	case OR_COMMAND:
+		printf("Command is: OR_COMMAND\n");
+		break;
+	case PIPE_COMMAND:
+		printf("Command is: PIPE_COMMAND\n");
+		break;
+	case SIMPLE_COMMAND:
+		printf("Command is: SIMPLE_COMMAND\n");
+		break;
+	case SUBSHELL_COMMAND:
+		printf("Command is: SUBSHELL_COMMAND\n");
+		break;
+	default:
+	{		
+		printf("Invalid Command\n");
 		error(1,0, "command processing error");
+	}
+   }
+
+
+	}
 }
 /*
 This is where simple commands get executed
@@ -211,7 +241,7 @@ void execute_simple(command_t c)
 //this might speed up the program
 
 		execvp(c->u.word[0], c->u.word ); //execution!
-
+		printf("Word is: %s\n", c->u.word[0]);
 		error(1, 0, "simple command invalid");
 	}
 	

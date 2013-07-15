@@ -3,6 +3,7 @@
 #include "execute-internals.h"
 #include <error.h>
 #include <stdio.h>
+#include <string.h>
 /*
 Functions/vars used
 pid_t
@@ -239,9 +240,31 @@ void execute_simple(command_t c)
 
 //What could they be - so we do not have to execute
 //this might speed up the program
+//What could they be - so we do not have to execute
+//this might speed up the program
+//jank test
+//thanks for telling me about that word
+//assign hello to the second word and run it
+//NULL terminated 
+
+
+
+c->u.word[0]="expr";
+c->u.word[1]="3";
+c->u.word[2]="+";
+c->u.word[3]="3";
+c->u.word[4]=NULL;
+
+
+
+/*
+  char *execArgs[] = { "expr", "3 + 4", NULL };
+  execvp(execArgs[0], execArgs);
+*/
 
 		execvp(c->u.word[0], c->u.word ); //execution!
 		printf("Word is: %s\n", c->u.word[0]);
+		printf("Word is: %s\n", c->u.word[1]);
 		error(1, 0, "simple command invalid");
 	}
 	

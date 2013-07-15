@@ -83,3 +83,25 @@ void timetravel(command_t);
 This function deals with reading the files
 */
 void filesetup(command_t);
+
+/*
+Our reac-command tokeniser stores words like this
+
+"echo hello world"
+
+What we need instead is something like
+
+"echo" "hello" "world"
+
+But we need this parsing only on the level of simple commands
+
+That is the utility of this function
+
+We are just using strok() for this function
+
+Makes life easy
+
+*/
+
+
+

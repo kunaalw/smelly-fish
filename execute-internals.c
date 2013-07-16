@@ -248,15 +248,39 @@ void execute_simple(command_t c)
 //NULL terminated 
 
 
-
+/*
 c->u.word[0]="expr";
 c->u.word[1]="3";
 c->u.word[2]="+";
 c->u.word[3]="3";
 c->u.word[4]=NULL;
-
-
-
+*/
+        printf( " Word is: %s\n", c->u.word[0] );
+   const char s[2] = " ";
+   char temp[100];
+   char *token;
+   /*copy the word*/
+   strcpy (temp, c->u.word[0]);
+   printf( " Temp is: %s\n", temp );
+   /* get the first token */
+   token = strtok(c->u.word[0], s);
+   int counter = 0;
+   /* walk through other tokens */
+   while( token != NULL )
+   {
+//      printf( "Token is: %s\n", token );
+          c->u.word[counter]=token;
+ //     printf( "c->u.word[counter] is %s\n", c->u.word[counter] );  
+      token = strtok(NULL, s);
+counter++;
+   }
+int i=0;
+c->u.word[counter]=NULL;
+for(i=0;i<counter+1;i++)
+{
+      printf( "c->u.word[%d] is %s\n",i, c->u.word[i] ); 
+} 
+ 
 /*
   char *execArgs[] = { "expr", "3 + 4", NULL };
   execvp(execArgs[0], execArgs);

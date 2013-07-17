@@ -36,4 +36,23 @@ Limitations
 
  * There are some cases of malformed commands that are ignored. It works as
    required for all well-formed commands. 
+   
 
+Lab 1a
+------
+
+Notes:
+
+ * We get commands in the form of command_t
+
+ * We branch depending on what kind of command it is accounting for AND, OR, PIPE, SUBSHELL and also redirects and sequence
+ 
+ * Comments describe functionality intricately
+
+ * Since the parser for part A gave simple commands as a simple word - we used the strok command to split it and use execvp to run it
+
+
+Limitations
+-----------
+
+ * We do not handle characters outside of the spec - since this is a subset of shell, we do not account for all possibilities by design

@@ -7,9 +7,6 @@ DISTDIR = lab1-$(USER)
 
 all: timetrash
 
-TESTS = $(wildcard test*.sh)
-TEST_BASES = $(subst .sh,,$(TESTS))
-
 TIMETRASH_SOURCES = \
   alloc.c \
   execute-command.c \

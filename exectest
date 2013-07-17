@@ -1,2 +1,1 @@
-expr 3 + 4 && ( echo test && expr 4 + 3 ) 
-echo hello world | sort
+()

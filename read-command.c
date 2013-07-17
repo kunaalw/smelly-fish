@@ -572,14 +572,14 @@ token** complete_command_divider (token* input_token_stream, int* num_commands)
   token* stored_token_stream = input_token_stream;
   // Count number of complete commands
   *num_commands = 0;
-	if (input_token_stream == NULL) printf("well damnnnnnn\n");
+	//if (input_token_stream == NULL) printf("well damnnnnnn\n");
   while (input_token_stream != NULL)
     {
       if (input_token_stream->type == SEQUENCE_TOKEN) (*num_commands)++;
 	  else if (input_token_stream->next_token == NULL) (*num_commands)++;
       input_token_stream = input_token_stream->next_token;
     }
-  if (*num_commands == 0) printf ("nope, not working\n");
+  //if (*num_commands == 0) printf ("nope, not working\n");
   input_token_stream = stored_token_stream;
   // Create array of token pointers (head token pointers); one entry per complete command
   // ## MEMORY ALLOCATION (III) ##
@@ -630,6 +630,7 @@ command_t make_single_command (token* tokenized_command)
   // Subshell command?
   if(current_token->type == SUBSHELL_OPEN_TOKEN)
     {
+      if ((current_token->next_token)->type == SUBSHELL_CLOSE_TOKEN) throw_error("ERROR: Empty subshell"); //CUT, SHIT, ZOMGGGGG ZOMBIES!!
       token* last_token = current_token;
       while (last_token->next_token != NULL)
 	last_token = last_token->next_token;
@@ -640,7 +641,6 @@ command_t make_single_command (token* tokenized_command)
 	  token* first_in_subshell = first_token->next_token;
 	  first_in_subshell->prev_token = NULL;
 	  last_in_subshell->next_token = NULL;
-	  
 	  return_command = (command_t) checked_malloc(sizeof(struct command));
 	  
 	  command_t ret_subshell_command = (command_t) checked_malloc(sizeof(struct command));
@@ -775,6 +775,7 @@ command_t make_single_command (token* tokenized_command)
 	  return_command->input = NULL;
 	  return_command->output = NULL;
 	  int redirect_flag = 0;
+
 	  
 	  if (current_token->next_token != NULL)
 	    {
@@ -868,7 +869,7 @@ make_command_stream (int (*get_next_byte) (void *),
       token *temp_token = current_token->next_token;
       current_token = temp_token;
     }
-  printf("Tokenizing complete\n\n\n");
+  //printf("Tokenizing complete\n\n\n");
   // !!! END TEST CODE !!!
  
   clean_token_stream(first_token);

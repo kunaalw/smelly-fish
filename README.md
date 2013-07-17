@@ -41,7 +41,7 @@ Limitations
 
  * There are some cases of malformed commands that are ignored. It works as
    required for all well-formed commands. 
-
+   !! NOTE: THIS HAS BEEN FIXED FOR MOST (IF NOT ALL) CASES !!
    
  
 Lab 1b

@@ -123,7 +123,7 @@ token *make_simple_token (token* input_prev_token, char* input_token_content, in
   int end = input_token_length - 1;
   while(end >= 0 && (!(isprint(input_token_content[end])))) 
     {
-	printf("Go Bruins\n");
+      //printf("Go Bruins\n");
       end--;
       input_token_length--;
     }
@@ -131,7 +131,7 @@ token *make_simple_token (token* input_prev_token, char* input_token_content, in
   end = input_token_length - 1;
   while(end >= 0 && isspace(input_token_content[end])) 
     {
-	printf("Meh Trojans\n");
+      //printf("Meh Trojans\n");
       end--;
       input_token_length--;
     }
@@ -146,9 +146,9 @@ token *make_simple_token (token* input_prev_token, char* input_token_content, in
   //*return_token->curr.simple_token.word_content = *input_token_content;
   strcpy(return_token->curr.simple_token.word_content, input_token_content);
 
-   printf("Input token content is: %s\n", input_token_content);
-   printf("Input token length is: %d\n", input_token_length);
-   printf("Saved token content is: %s\n", return_token->curr.simple_token.word_content);
+  //printf("Input token content is: %s\n", input_token_content);
+  //printf("Input token length is: %d\n", input_token_length);
+  //printf("Saved token content is: %s\n", return_token->curr.simple_token.word_content);
 
   return_token->prev_token = input_prev_token;
   return_token->next_token = NULL;
@@ -208,7 +208,7 @@ int buffer_tokenize
 	  	*curr_minus_one_token = *curr_token;
 	  	*curr_token = make_simple_token (*curr_minus_one_token, buffer, *buffer_size);
 	   }
-	  else printf("BLAAAAAAAHHHHH\n");
+	  //else printf("BLAAAAAAAHHHHH\n");
 	}
 
       memset(buffer, '\0', sizeof(char)*(*buffer_size));
@@ -246,7 +246,7 @@ token *make_token_stream (int (*get_next_byte) (void *),
   int is_first_token = 0;
 
   regex_t check_word;
-  regcomp(&check_word, "[A-Za-z0-9!%+,-./:@^_]", REG_EXTENDED);
+  regcomp(&check_word, "[A-Za-z0-9!%+,-./:@^_*~]", REG_EXTENDED);
 
   while ((in_char = get_next_byte(get_next_byte_argument)) != EOF)
     {
@@ -429,7 +429,7 @@ void clean_token_stream (token* input_token_stream)
 	      stored_token_stream = input_token_stream;
 	      if (input_token_stream->next_token != NULL)
 		(input_token_stream->next_token)->prev_token = NULL;
-	     
+	      
 	      free(delete_token);
 	    }
 	  // If two newlines, delete one
@@ -473,10 +473,10 @@ void clean_token_stream (token* input_token_stream)
 
 	      if (input_token_stream->next_token != NULL)
 		(input_token_stream->next_token)->prev_token = input_token_stream->prev_token;
-	     
+	      
 	      input_token_stream = input_token_stream->next_token;
 	      free(delete_token);
-	      }
+	    }
 	  // If it's none of these, it clearly signifies a new command - so change to sequence type
 	  else
 	    {
@@ -651,7 +651,7 @@ command_t make_single_command (token* tokenized_command)
 	  return_command->status = -1;
 	  return_command->input = NULL;
 	  return_command->output = NULL;
-	  printf("Goes in the subshell if statement\n");
+	  //printf("Goes in the subshell if statement\n");
 	  if (return_command == NULL) throw_error("ERROR: Empty command");
 	  return return_command;
 	}
@@ -846,7 +846,7 @@ make_command_stream (int (*get_next_byte) (void *),
 		     void *get_next_byte_argument)
 {
   token *first_token = make_token_stream (get_next_byte, get_next_byte_argument);
-	if (first_token != NULL) printf("--->There is at least one token\n");
+  //if (first_token != NULL) printf("--->There is at least one token\n");
   
   while((first_token != NULL) && (first_token->type == NEWLINE_TOKEN || first_token->type == SEQUENCE_TOKEN))
     {
@@ -872,10 +872,10 @@ make_command_stream (int (*get_next_byte) (void *),
   // !!! END TEST CODE !!!
  
   clean_token_stream(first_token);
-  if (first_token != NULL) printf("--->There is at least one token even after clean-up\n");
+  //if (first_token != NULL) printf("--->There is at least one token even after clean-up\n");
   int num_commands = 0;
   token** tokenized_command_array = complete_command_divider(first_token, &num_commands);
-  if (num_commands == 0) printf("#*$(@# DRATS!! *#@(#\n");
+  //if (num_commands == 0) printf("#*$(@# DRATS!! *#@(#\n");
   // !!! TEST TOKENIZED COMMAND ARRAY CODE !!! (remove before submission)
   int i = 0;
   for (i; i < num_commands; i++)

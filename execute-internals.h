@@ -48,44 +48,11 @@ Execute A
 */
 void execute_or (command_t);
 
-/*
-Execute redirects
-Haven't figured this out completely yet
-Should work with simple commands
-
-But haven't checked subshell yet
-*/
-void execute_redirect(command_t);
 
 /*
-Executes simple, atomic commands
-*/
+Executes simple, atomic commands accounting for redirects
 
-void execute_simple (command_t);
-
-/* 
-Not implemented
-*/
-void execute_sequence (command_t);
-
-/* 
-Not implemented
-*/
-void execute_subshell (command_t);
-
-void no_tt (command_t);
-/*
-Part 1c - not yet implemented
-*/
-void timetravel(command_t);
-
-/*
-This function deals with reading the files
-*/
-void filesetup(command_t);
-
-/*
-Our reac-command tokeniser stores words like this
+Our read-command tokeniser stores words like this
 
 "echo hello world"
 
@@ -102,6 +69,34 @@ We are just using strok() for this function
 Makes life easy
 
 */
+
+void execute_simple (command_t);
+
+/* 
+Executes sequence commands
+
+In our version of the program this is not called
+We could potentially use this function in the future
+*/
+void execute_sequence (command_t);
+
+/* 
+Recursively calls no_tt
+*/
+void execute_subshell (command_t);
+
+/* this is where all the magic happens - but this is only a switch command */
+void no_tt (command_t);
+
+/*
+Part 1c - not yet implemented
+*/
+void timetravel(command_t);
+
+/*
+This function deals with reading the files
+*/
+void filesetup(command_t);
 
 
 

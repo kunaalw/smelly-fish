@@ -177,52 +177,6 @@ void execute_or(command_t c)
     c->status = c->u.command[0]->status;
 }
 
-void execute_redirect(command_t c)
-{
-
-	if(c->type == SIMPLE_COMMAND)
-	{
-		execute_simple(c);
-	}
-	
-	if(c->type == SUBSHELL_COMMAND)
-	{
-		execute_subshell(c);
-	}
-	/*
-	else
-	{
-	switch (c->type) 
-   {
-    case AND_COMMAND:
-		printf("Command is: AND_COMMAND\n");
-		break;
-    case SEQUENCE_COMMAND:
-		printf("Command is: SEQUENCE_COMMAND\n");
-		break;
-	case OR_COMMAND:
-		printf("Command is: OR_COMMAND\n");
-		break;
-	case PIPE_COMMAND:
-		printf("Command is: PIPE_COMMAND\n");
-		break;
-	case SIMPLE_COMMAND:
-		printf("Command is: SIMPLE_COMMAND\n");
-		break;
-	case SUBSHELL_COMMAND:
-		printf("Command is: SUBSHELL_COMMAND\n");
-		break;
-	default:
-	{		
-		printf("Invalid Command\n");
-		error(1,0, "command processing error");
-	}
-   }
-
-
-	}
-	*/
-}
 /*
 This is where simple commands get executed
 

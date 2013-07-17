@@ -48,7 +48,7 @@ switch(c->type)
       break;
 	  
     case SIMPLE_COMMAND:
-      execute_redirect(c); //for simple, redirect and shell - sorry for confusing naming
+      execute_simple(c);
       break;
 	  
 	case SEQUENCE_COMMAND:

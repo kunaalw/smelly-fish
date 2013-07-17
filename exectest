@@ -1,1 +1,2 @@
-   expr 3 + 4 && expr 4                 + 5                           && expr 6 + 7 && echo hello
+expr 3 + 4 && ( echo test && expr 4 + 3 ) 
+echo hello world | sort

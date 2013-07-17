@@ -42,21 +42,23 @@ switch(c->type)
 	case AND_COMMAND:
       execute_and(c);
       break;
-	
+	  
     case PIPE_COMMAND:
       execute_pipe(c);
       break;
+	  
     case SIMPLE_COMMAND:
-      execute_redirect(c);
+      execute_redirect(c); //for simple, redirect and shell - sorry for confusing naming
       break;
-	/*
+	  
 	case SEQUENCE_COMMAND:
       execute_sequence(c);
     break;
+	
     case SUBSHELL_COMMAND:
-      execute_redirect(c);
+      execute_subshell(c);
       break;
-	 */ 
+	  
     default:
       error(1, 0, "Command Type Incorrect - Command does not belong to any supported type");
 	}

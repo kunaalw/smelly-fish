@@ -189,7 +189,7 @@ void execute_redirect(command_t c)
 	{
 		execute_subshell(c);
 	}
-	
+	/*
 	else
 	{
 	switch (c->type) 
@@ -221,6 +221,7 @@ void execute_redirect(command_t c)
 
 
 	}
+	*/
 }
 /*
 This is where simple commands get executed
@@ -255,13 +256,13 @@ c->u.word[2]="+";
 c->u.word[3]="3";
 c->u.word[4]=NULL;
 */
-        printf( " Word is: %s\n", c->u.word[0] );
+ //       printf( " Word is: %s\n", c->u.word[0] );
    const char s[2] = " ";
    char temp[100];
    char *token;
    /*copy the word*/
    strcpy (temp, c->u.word[0]);
-   printf( " Temp is: %s\n", temp );
+  // printf( " Temp is: %s\n", temp );
    /* get the first token */
    token = strtok(c->u.word[0], s);
    int counter = 0;
@@ -271,16 +272,17 @@ c->u.word[4]=NULL;
 //      printf( "Token is: %s\n", token );
           c->u.word[counter]=token;
  //     printf( "c->u.word[counter] is %s\n", c->u.word[counter] );  
-      token = strtok(NULL, s);
+      token = strtok(NULL, s); 
 counter++;
    }
 int i=0;
 c->u.word[counter]=NULL;
+/*
 for(i=0;i<counter+1;i++)
 {
       printf( "c->u.word[%d] is %s\n",i, c->u.word[i] ); 
 } 
- 
+ */
 /*
   char *execArgs[] = { "expr", "3 + 4", NULL };
   execvp(execArgs[0], execArgs);
@@ -301,13 +303,59 @@ for(i=0;i<counter+1;i++)
 		error(1, 0, "fork error");
 }
 
+/*
+void execute_subshell(command_t c)
+This is fairly trivial - we need to setup the file if there is a redirect, and then recursively call no_tt
+*/
+
 void execute_subshell(command_t c)
 {
-error(1, 0, "Subshell not yet implemented");
+filesetup(c);
+no_tt(c->u.subshell_command);
+}
+void execute_sequence(command_t c)
+{
+  int status;
+
+  pid_t pid = fork();
+
+  if(pid == 0) //child
+  {
+    pid = fork(); //fork another child - too many children!
+
+    if( pid > 0)
+    {
+      waitpid(pid, &status, 0);
+
+      no_tt(c->u.command[1]);
+
+      _exit(c->u.command[1]->status); //_exit for child - V.Imp
+    }
+    else if( pid == 0) // grandchild or original process, child of child
+    {
+      
+	  no_tt(c->u.command[0]);
+	  
+      _exit(c->u.command[0]->status); //_exit()
+
+	  }
+    else
+      error(1, 0, "Fork failure");
+  }
+    else if(pid > 0) //parent
+  {
+    waitpid(pid, &status, 0);
+    c->status = status;
+  }
+  
+  else
+    error(1, 0, "Fork Failure");
 }
 
 /*
 Opens files for reading and writing
+
+This takes care of redirect operations
 
 http://linux.die.net/man/3/open
 

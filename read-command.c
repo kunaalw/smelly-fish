@@ -701,6 +701,7 @@ command_t make_single_command (token* tokenized_command)
 
 	  // Taking care of the right branch
 	  if (current_token->next_token == NULL) throw_error("ERROR: Malformed expression - boolean without succeeding expression");
+	  else if (current_token->next_token->type == SUBSHELL_CLOSE_TOKEN) throw_error("ERROR: Malformed expression - boolean with bad succeeding expression");
 	  else
 	    {
 	      right_branch = current_token->next_token;

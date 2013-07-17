@@ -555,12 +555,14 @@ token** complete_command_divider (token* input_token_stream, int* num_commands)
   token* stored_token_stream = input_token_stream;
   // Count number of complete commands
   *num_commands = 0;
+	if (input_token_stream == NULL) printf("well damnnnnnn\n");
   while (input_token_stream != NULL)
     {
       if (input_token_stream->type == SEQUENCE_TOKEN) (*num_commands)++;
+	  else if (input_token_stream->next_token == NULL) (*num_commands)++;
       input_token_stream = input_token_stream->next_token;
     }
-  
+  if (*num_commands == 0) printf ("nope, not working\n");
   input_token_stream = stored_token_stream;
   // Create array of token pointers (head token pointers); one entry per complete command
   // ## MEMORY ALLOCATION (III) ##
@@ -827,6 +829,7 @@ make_command_stream (int (*get_next_byte) (void *),
 		     void *get_next_byte_argument)
 {
   token *first_token = make_token_stream (get_next_byte, get_next_byte_argument);
+	if (first_token != NULL) printf("--->There is at least one token\n");
   
   while((first_token != NULL) && (first_token->type == NEWLINE_TOKEN || first_token->type == SEQUENCE_TOKEN))
     {
@@ -852,10 +855,10 @@ make_command_stream (int (*get_next_byte) (void *),
   // !!! END TEST CODE !!!
  
   clean_token_stream(first_token);
-
-  int num_commands;
+  if (first_token != NULL) printf("--->There is at least one token even after clean-up\n");
+  int num_commands = 0;
   token** tokenized_command_array = complete_command_divider(first_token, &num_commands);
-
+  if (num_commands == 0) printf("#*$(@# DRATS!! *#@(#\n");
   // !!! TEST TOKENIZED COMMAND ARRAY CODE !!! (remove before submission)
   int i = 0;
   for (i; i < num_commands; i++)
@@ -863,7 +866,7 @@ make_command_stream (int (*get_next_byte) (void *),
       token *current_token = tokenized_command_array[i];
       //printf("\n\n *** COMMAND %d *** \n", (i+1));
       while(current_token != NULL)
-	{
+	{ 
 	  //token_type_printer(current_token);
 	  token *temp_token = current_token->next_token;
 	  current_token = temp_token;
@@ -928,3 +931,4 @@ read_command_stream (command_stream_t s)
     }
   return 0;
 }
+

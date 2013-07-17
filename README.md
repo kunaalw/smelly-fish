@@ -42,4 +42,14 @@ Limitations
  * There are some cases of malformed commands that are ignored. It works as
    required for all well-formed commands. 
 
+   
+ 
+Lab 1b
+------
 
+Notes:
+
+ * Added 2 new files - execute-internals.h and execute-internals.c
+   These contain execution functions for individual types of commands and their prototypes in the header
+ * Made changes to the makefile to accommodate the above changes
+ 

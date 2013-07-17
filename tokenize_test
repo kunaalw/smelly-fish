@@ -1,2 +1,6 @@
+<<<<<<< HEAD
 cat < /etc/passwd | tr a-z A-Z | sort -u || echo sort failed!
 
+=======
+./a && ./b && ./c
+>>>>>>> 913860056b65d0d49decaf49cedc608b70d7f6ca

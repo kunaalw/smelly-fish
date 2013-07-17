@@ -117,26 +117,34 @@ token *make_simple_token (token* input_prev_token, char* input_token_content, in
   token* return_token = (token*) checked_malloc(sizeof(token));
   return_token->type = SIMPLE_TOKEN;
   
-  // Trim trailing space
-  char* end = input_token_content + strlen(input_token_content) - 1;
-  while(end > input_token_content && isspace(*end)) 
+  // Trim control characters
+  int end = input_token_length - 1;
+  while(end >= 0 && (!(isprint(input_token_content[end])))) 
     {
       end--;
       input_token_length--;
     }
+  // Trim trailing space
+  end = input_token_length - 1;
+  while(end >= 0 && isspace(input_token_content[end])) 
+    {
+      end--;
+      input_token_length--;
+    }
+
   
   if (input_token_length == 0) throw_error("ERROR: word expected ; not found");
   // Write new null terminator
-  *(end+1) = '\0';
+  input_token_content[end+1] = '\0';
 
   return_token->curr.simple_token.word_length = input_token_length;
   return_token->curr.simple_token.word_content = (char*) checked_malloc(sizeof(char)*input_token_length);
   //*return_token->curr.simple_token.word_content = *input_token_content;
   strcpy(return_token->curr.simple_token.word_content, input_token_content);
 
-  // printf("Input token content is: %s\n", input_token_content);
-  // printf("Input token length is: %d\n", input_token_length);
-  // printf("Saved token content is: %s\n", return_token->curr.simple_token.word_content);
+   printf("Input token content is: %s\n", input_token_content);
+   printf("Input token length is: %d\n", input_token_length);
+   printf("Saved token content is: %s\n", return_token->curr.simple_token.word_content);
 
   return_token->prev_token = input_prev_token;
   return_token->next_token = NULL;
@@ -847,11 +855,11 @@ make_command_stream (int (*get_next_byte) (void *),
   token *current_token = first_token;
   while(current_token != NULL)
     {
-      //token_type_printer(current_token);
+      token_type_printer(current_token);
       token *temp_token = current_token->next_token;
       current_token = temp_token;
     }
-  //printf("Tokenizing complete\n\n\n");
+  printf("Tokenizing complete\n\n\n");
   // !!! END TEST CODE !!!
  
   clean_token_stream(first_token);
@@ -931,4 +939,3 @@ read_command_stream (command_stream_t s)
     }
   return 0;
 }
-

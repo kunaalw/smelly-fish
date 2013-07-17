@@ -116,24 +116,28 @@ token *make_simple_token (token* input_prev_token, char* input_token_content, in
   // ## Deallocation should occur before end of make_command_stream ##
   token* return_token = (token*) checked_malloc(sizeof(token));
   return_token->type = SIMPLE_TOKEN;
-  
+
+  input_token_length=strlen(input_token_content);  
+
   // Trim control characters
   int end = input_token_length - 1;
   while(end >= 0 && (!(isprint(input_token_content[end])))) 
     {
+	printf("Go Bruins\n");
       end--;
       input_token_length--;
     }
   // Trim trailing space
-  end = input_token_length - 1;
+  /*end = input_token_length - 1;
   while(end >= 0 && isspace(input_token_content[end])) 
     {
+	printf("Meh Trojans\n");
       end--;
       input_token_length--;
-    }
+    }*/
 
   
-  if (input_token_length == 0) throw_error("ERROR: word expected ; not found");
+  if (input_token_length == 0) return NULL;
   // Write new null terminator
   input_token_content[end+1] = '\0';
 
@@ -198,8 +202,13 @@ int buffer_tokenize
 	}
       else if (*buffer_type == SIMPLE_TOKEN)
 	{
-	  *curr_minus_one_token = *curr_token;
-	  *curr_token = make_simple_token (*curr_minus_one_token, buffer, *buffer_size);
+	  token** curr_temp_token = curr_token;
+	  if (make_simple_token (*curr_temp_token, buffer, *buffer_size) != NULL)
+	   {
+	  	*curr_minus_one_token = *curr_token;
+	  	*curr_token = make_simple_token (*curr_minus_one_token, buffer, *buffer_size);
+	   }
+	  else printf("BLAAAAAAAHHHHH\n");
 	}
 
       memset(buffer, '\0', sizeof(char)*(*buffer_size));
@@ -642,7 +651,7 @@ command_t make_single_command (token* tokenized_command)
 	  return_command->status = -1;
 	  return_command->input = NULL;
 	  return_command->output = NULL;
-	  //printf("Goes in the subshell if statement\n");
+	  printf("Goes in the subshell if statement\n");
 	  if (return_command == NULL) throw_error("ERROR: Empty command");
 	  return return_command;
 	}

@@ -128,13 +128,13 @@ token *make_simple_token (token* input_prev_token, char* input_token_content, in
       input_token_length--;
     }
   // Trim trailing space
-  /*end = input_token_length - 1;
+  end = input_token_length - 1;
   while(end >= 0 && isspace(input_token_content[end])) 
     {
 	printf("Meh Trojans\n");
       end--;
       input_token_length--;
-    }*/
+    }
 
   
   if (input_token_length == 0) return NULL;

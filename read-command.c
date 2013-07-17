@@ -246,7 +246,7 @@ token *make_token_stream (int (*get_next_byte) (void *),
   int is_first_token = 0;
 
   regex_t check_word;
-  regcomp(&check_word, "[A-Za-z0-9!%+,-./:@^_*~]", REG_EXTENDED);
+  regcomp(&check_word, "[A-Za-z0-9!%+,-./:@^_]", REG_EXTENDED);
 
   while ((in_char = get_next_byte(get_next_byte_argument)) != EOF)
     {
@@ -667,7 +667,7 @@ command_t make_single_command (token* tokenized_command)
 		counter++;
 	      if(current_token->type == SUBSHELL_CLOSE_TOKEN)
 		counter--;
-	      token_type_printer(current_token);
+	      //token_type_printer(current_token);
 	      if(counter == 0)
 		{
 		  break;
@@ -864,7 +864,7 @@ make_command_stream (int (*get_next_byte) (void *),
   token *current_token = first_token;
   while(current_token != NULL)
     {
-      token_type_printer(current_token);
+      //token_type_printer(current_token);
       token *temp_token = current_token->next_token;
       current_token = temp_token;
     }

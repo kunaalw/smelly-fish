@@ -127,7 +127,7 @@ token *make_simple_token (token* input_prev_token, char* input_token_content, in
   
   if (input_token_length == 0) throw_error("ERROR: word expected ; not found");
   // Write new null terminator
-  *(end+1) = 0;
+  *(end+1) = '\0';
 
   return_token->curr.simple_token.word_length = input_token_length;
   return_token->curr.simple_token.word_content = (char*) checked_malloc(sizeof(char)*input_token_length);

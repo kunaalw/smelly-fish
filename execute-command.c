@@ -4,6 +4,7 @@
 #include "command-internals.h"
 #include "execute-internals.h"
 #include <error.h>
+#include <stdio.h>
 
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
@@ -23,7 +24,7 @@ if (time_travel == 0)
 no_tt(c);
 
 else
-timetravel (c);
+printf("You shouldn't get here");
 
 /*
   error (1, 0, "you shouldn't really get here");
@@ -63,8 +64,4 @@ switch(c->type)
       error(1, 0, "Command Type Incorrect - Command does not belong to any supported type");
 	}
 	
-}
-void timetravel(command_t c)
-{
-error(1, 0, "Timetravel not yet implemented");
 }

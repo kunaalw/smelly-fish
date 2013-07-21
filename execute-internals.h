@@ -89,11 +89,6 @@ void execute_subshell (command_t);
 void no_tt (command_t);
 
 /*
-Part 1c - not yet implemented
-*/
-void timetravel(command_t);
-
-/*
 This function deals with reading the files
 */
 void filesetup(command_t);

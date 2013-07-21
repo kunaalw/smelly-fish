@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include "command.h"
+#include "timetravel.h"
 
 static char const *program_name;
 static char const *script_name;
@@ -54,7 +55,14 @@ main (int argc, char **argv)
 
   command_t last_command = NULL;
   command_t command;
-  while ((command = read_command_stream (command_stream)))
+
+
+if(time_travel==1)
+timetravel(command_stream);
+
+else
+{  
+while ((command = read_command_stream (command_stream)))
     {
       if (print_tree)
 	{
@@ -69,4 +77,7 @@ main (int argc, char **argv)
     }
 
   return print_tree || !last_command ? 0 : command_status (last_command);
+}
+
+return 0;
 }

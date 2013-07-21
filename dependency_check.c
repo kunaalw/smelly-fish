@@ -4,18 +4,12 @@
 #include "command-internals.h"
 #include "execute-internals.h"
 #include "alloc.h"
-
+#include "timetravel.h"
 #include <string.h>
 #include <error.h>
 #include <stdio.h>
 
 
-typedef struct command_dependencies command_dependencies;
-struct command_dependencies
-  {
-    char **list_of_files;
-    int num_files;
-  };
 
 command_dependencies single_command_dependencies(command_t c)
 {

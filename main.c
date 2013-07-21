@@ -72,6 +72,18 @@ while ((command = read_command_stream (command_stream)))
       else
 	{
 	  last_command = command;
+	  command_dependencies temp = single_command_dependencies (command);
+          printf("Number of dependencies = %d\n", temp.num_files);
+          if (temp.num_files > 0)
+            {
+	       printf("The dependencies are: \n");
+               int i = 0;
+               while (i < temp.num_files)
+                 {
+                    printf("   (%d) %s\n", (i+1), temp.list_of_files[i]);
+                    i++;
+                 }
+            }
 	  execute_command (command, time_travel);
 	}
     }

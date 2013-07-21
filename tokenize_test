@@ -1,6 +1,4 @@
-<<<<<<< HEAD
-cat < /etc/passwd | tr a-z A-Z | sort -u || echo sort failed!
-
-=======
-./a && ./b && ./c
->>>>>>> 913860056b65d0d49decaf49cedc608b70d7f6ca
+cat x meh
+echo -s hello goodbye > phi
+touch a < gamma > delta
+touch -rx b c d e f g

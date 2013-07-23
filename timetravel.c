@@ -152,6 +152,7 @@ void print_dependency_table (parallel_data initialized)
     }
 }
 
+// Call when the command with index n is completed (nth command from input)
 void completed_nth_command (parallel_data* in_data, int cmd_completed, int complete_status)
 {
   if (cmd_completed > in_data->num_cmds_rows || cmd_completed < 0)  error (1, 0, "ERROR: bad update value given to dependency table");
@@ -165,6 +166,12 @@ void completed_nth_command (parallel_data* in_data, int cmd_completed, int compl
   in_data->status_table[cmd_completed] = complete_status;
 }
 
+// Call to check if nth command can be run (i.e. has no pending dependency - or no command needs to be run before it)
+// return value = 0 means can be run; return value = -1 means cannot be run
+int check_nth_command (parallel_data* in_data, int cmd_to_check)
+{
+  return -1;
+}
 
 void timetravel(command_stream_t s)
 { 

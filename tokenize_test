@@ -1,4 +1,3 @@
-cat -s command.h
 cat x meh
 echo hello
 echo -s hello goodbye > phi

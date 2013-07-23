@@ -94,7 +94,15 @@ struct command_dependencies
     int num_files;
   };
 
-
+  struct parallel_data
+  {
+    int** dependency_table;  // the main dependency table
+    char** file_reference_key;  // find index by name (use strcmp in a loop)
+    int* status_table;  // you know you are done when all the statuses are 0 (none should ever be -1)
+    int num_files_cols;  // number of columns/files
+    int num_cmds_rows;  // number of rows/commands 
+  };
+  typedef struct parallel_data parallel_data;
 command_dependencies single_command_dependencies(command_t);
 /*
 typedef struct 
@@ -105,3 +113,14 @@ int filecount;
 
 command_dependencies* single_command_dependencies(command_t);
 */
+
+/* 
+void * function for pthread_create
+
+This is where the thread executes
+*/
+void* parallelexecute(void *);
+
+
+//Check if all execution is complete
+int completecheck(parallel_data);

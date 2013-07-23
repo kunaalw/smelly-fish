@@ -6,28 +6,27 @@
 #include <error.h>
 #include <stdio.h>
 #include <string.h>
-
+#include <pthread.h>    /* POSIX Threads */
 #include <sys/wait.h> 
 #include <unistd.h>  
 #include <sys/types.h>  
 #include <stdlib.h>  
 #include <error.h>
 #include <errno.h>
-
+#include <assert.h>
 #include <fcntl.h>			
 #include <sys/stat.h>
+#define MAXTHREADS 5
 
+pthread_t tid[MAXTHREADS];
 
-typedef struct parallel_data parallel_data;
-struct parallel_data
-  {
-    int** dependency_table;  // the main dependency table
-    char** file_reference_key;  // find index by name (use strcmp in a loop)
-    int* status_table;  // you know you are done when all the statuses are 0 (none should ever be -1)
-    int num_files_cols;  // number of columns/files
-    int num_cmds_rows;  // number of rows/commands 
-  };
+ 
+ //global variable for dependency pool
+parallel_data global_table;
 
+ //global variable for commands
+//command_stream_t *global_command = (command_stream_t*) checked_malloc(sizeof(command_stream_t*));
+command_stream_t global_command;
 
 // Creates the dependency table
 parallel_data create_dependency_table (command_stream_t s)
@@ -195,9 +194,87 @@ int check_nth_command (parallel_data* in_data, int cmd_to_check)
 
 void timetravel(command_stream_t s)
 { 
+ int *retvals[MAXTHREADS];
   if (s == NULL) return;
   if (s->num_commands == 0) return;
+	int err;
+  global_table = create_dependency_table(s);
+  //global_command = &s;
+  global_command = s;
+  int fill=0;
+  for(fill=0;fill<s->num_commands;fill++)
+  {
+  global_table.status_table[fill]=1;//Set all commands to waiting
+  }
 
-  parallel_data initialized = create_dependency_table(s);
-  print_dependency_table(initialized);
+  int finished=0;
+while(finished==0)
+{
+int threadindex=0;
+for(threadindex=0;threadindex<MAXTHREADS;threadindex++)
+{	
+        err = pthread_create(&(tid[threadindex]), NULL, &parallelexecute, NULL);
+        if (err != 0)
+            printf("\ncan't create thread :[%s]", strerror(err));
+        else
+            printf("\n Thread created successfully\n");
+}
+
+for(threadindex=0;threadindex<MAXTHREADS;threadindex++)
+{	
+ pthread_join(tid[threadindex], (void**)&(retvals[threadindex]));
+}
+
+ 
+/*
+struct parallel_data
+  {
+    int** dependency_table;  // the main dependency table
+    char** file_reference_key;  // find index by name (use strcmp in a loop)
+    int* status_table;  // you know you are done when all the statuses are 0 (none should ever be -1)
+    int num_files_cols;  // number of columns/files
+    int num_cmds_rows;  // number of rows/commands 
+  };
+*/
+if(completecheck(global_table)==0)
+{
+finished=1;
+}
+
+
+}
+ // print_dependency_table(global_table);
+ //print_command(global_command->command_array[1]);
+}
+
+int completecheck(parallel_data data)
+{
+// status 1 = runnable, status 2 = running,  status 0 = completed successfully, status -1 = unsuccessful
+int i=0;
+for(i=0;i<data.num_cmds_rows;i++)
+{
+if(data.status_table[i]!=0)
+return -1;
+}
+return 0;
+}
+
+
+void* parallelexecute(void *arg)
+{
+int i;
+for(i=0;i<global_table.num_cmds_rows;i++)
+{
+// status 1 = runnable, status 2 = running,  status 0 = completed successfully, status -1 = unsuccessful
+if(global_table.status_table[i]==1&&(check_nth_command(&global_table, i))==0)
+{
+global_table.status_table[i]=2;
+execute_command(global_command->command_array[i], 0);
+completed_nth_command(&global_table, i, 0);
+break;
+}
+}
+//We should never get here
+completed_nth_command(&global_table, i, -1);
+assert( !"Unreachable code hit" );
 }

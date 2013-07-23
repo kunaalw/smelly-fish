@@ -170,7 +170,27 @@ void completed_nth_command (parallel_data* in_data, int cmd_completed, int compl
 // return value = 0 means can be run; return value = -1 means cannot be run
 int check_nth_command (parallel_data* in_data, int cmd_to_check)
 {
-  return -1;
+  if (cmd_to_check > in_data->num_cmds_rows || cmd_to_check < 0)  error (1, 0, "ERROR: bad command number given to dependency table to check");
+  int ret_val = 0;
+
+  int i = 0;
+  for (i; i < in_data->num_files_cols; i++)
+    {
+      if ((in_data->dependency_table)[cmd_to_check][i] == 1)
+	{
+	  int j = 0;
+	  for (j; j < cmd_to_check; j++)
+	    {
+	      if ((in_data->dependency_table)[j][i] == 1)
+		{
+		  ret_val = -1;
+		  return ret_val;
+		}
+	    }
+	}
+    }
+
+  return ret_val;
 }
 
 void timetravel(command_stream_t s)

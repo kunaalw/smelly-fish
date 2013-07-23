@@ -266,6 +266,7 @@ void execute_subshell(command_t c)
 {
 filesetup(c);
 no_tt(c->u.subshell_command);
+_exit(c->u.subshell_command->status);
 }
 void execute_sequence(command_t c)
 {

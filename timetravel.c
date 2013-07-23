@@ -3,30 +3,21 @@
 #include "execute-internals.h"
 #include "alloc.h"
 #include "timetravel.h"
+
 #include <error.h>
 #include <stdio.h>
 #include <string.h>
-#include <pthread.h>    /* POSIX Threads */
 #include <sys/wait.h> 
 #include <unistd.h>  
+#include <signal.h>
 #include <sys/types.h>  
 #include <stdlib.h>  
 #include <error.h>
 #include <errno.h>
-#include <assert.h>
 #include <fcntl.h>			
 #include <sys/stat.h>
-#define MAXTHREADS 5
+#include <pthread.h>
 
-pthread_t tid[MAXTHREADS];
-
- 
- //global variable for dependency pool
-parallel_data global_table;
-
- //global variable for commands
-//command_stream_t *global_command = (command_stream_t*) checked_malloc(sizeof(command_stream_t*));
-command_stream_t global_command;
 
 // Creates the dependency table
 parallel_data create_dependency_table (command_stream_t s)
@@ -37,10 +28,15 @@ parallel_data create_dependency_table (command_stream_t s)
   int size_of_file_array = 0;
   char** array_of_file_indices = (char**) checked_malloc(size_of_file_array*sizeof(char*));
   
-  int commands_status [s->num_commands]; // status 1 = runnable, status 2 = running,  status 0 = completed successfully, status -1 = unsuccessful
+  //int commands_status [s->num_commands]; // status 1 = runnable, status 2 = running, status 3 = ready, status 0 = completed successfully, status -1 = completed unsuccessful
+
+  int* commands_status = (int*) calloc(s->num_commands, sizeof(int));
+
   int populate_status = 0;
-  for (populate_status; populate_status < s->num_commands; populate_status++)
-    commands_status[populate_status] = 1;
+  for (populate_status; populate_status < (s->num_commands); populate_status++)
+    {
+      commands_status[populate_status] = 1;
+    }
   
   // Find the number of files (to create a 2D array later) - and populate single file array
   int i = 0; 
@@ -192,41 +188,148 @@ int check_nth_command (parallel_data* in_data, int cmd_to_check)
   return ret_val;
 }
 
+
+// Function called when thread is spawned
+void* run_thread (void* argvoid)
+{
+  command_t* argpoint = (command_t*) argvoid;
+  command_t argreal = *argpoint;
+  execute_command(argreal, 0);
+  return NULL;
+}
+
+// Returns status of thread - 1 = still running, 0 = exited/dead
+int check_thread_status (pthread_t in_thread)
+{
+  if(pthread_kill(in_thread, 0) == 0)
+    {
+      return 1; 
+    }
+  return 0;
+}
+
 void timetravel(command_stream_t s)
-{ 
- int *retvals[MAXTHREADS];
+{
+  // The maximum number of threads that can exist at a given time
+  int max_num_threads = 6;
+
+  pthread_t threads[max_num_threads];
+  int thread_cmd_running[max_num_threads];
+
+  int a = 0;
+  for (a; a < max_num_threads; a++)
+    {
+      thread_cmd_running[a] = -1;
+    }
+
   if (s == NULL) return;
   if (s->num_commands == 0) return;
-	int err;
-  global_table = create_dependency_table(s);
-  //global_command = &s;
-  global_command = s;
-  int fill=0;
-  for(fill=0;fill<s->num_commands;fill++)
-  {
-  global_table.status_table[fill]=1;//Set all commands to waiting
-  }
 
-  int finished=0;
-while(finished==0)
-{
-int threadindex=0;
-for(threadindex=0;threadindex<MAXTHREADS;threadindex++)
-{	
-        err = pthread_create(&(tid[threadindex]), NULL, &parallelexecute, NULL);
-        if (err != 0)
-            printf("\ncan't create thread :[%s]", strerror(err));
-        else
-            printf("\n Thread created successfully\n");
+  parallel_data initialized = create_dependency_table(s);
+
+  printf(" -- STATUS: Dependency table created\n");
+  print_dependency_table(initialized);
+
+  int exit_check = 0;
+  int curr_num_threads = 0;
+  
+  while (exit_check == 0)
+    {
+      //printf(" -- STATUS: Enters the main loop\n");
+      // Check to see if any threads have completed and update dependency table if they have
+      int b = 0;
+      for (b; b < max_num_threads; b++)
+	{
+	  // if this was actually a command, update dependency table and status
+	  if (thread_cmd_running[b] != -1 && check_thread_status(threads[b]) == 0)
+	    {
+	      int cmd_completed = thread_cmd_running[b];
+	      completed_nth_command (&initialized, cmd_completed, 0);
+	      thread_cmd_running[b] = -1;
+	    }
+	  else b++;
+	}
+      curr_num_threads = b;
+
+      //printf(" -- STATUS: Completed thread checking complete\n");
+      // Check status
+      int i = 0;
+      exit_check = 1;
+      for (i; i < initialized.num_cmds_rows; i++)
+	{
+	  if (initialized.status_table[i] != 0)
+	    {
+	      exit_check = 0;
+	      break;
+	    }
+	}
+      
+      // If status is 1, exit
+      if (exit_check == 1 && curr_num_threads == 0)
+	{
+	  return;
+	}
+      else if (exit_check == 1 && curr_num_threads > 0)
+	{
+	  error (1, 0, "ERROR: Implementation error - bad flag setting - threads still running");
+	  return;
+	}
+      else if (exit_check == 1 && curr_num_threads < 0)
+	{
+	  error (1, 0, "ERROR: Implementation error - negative number of threads");
+	  return;
+	}  
+
+      // If status is 0, do work
+      else 
+	{
+	  // Check if anything has become ready
+	  int m = 0;
+	  for (m; m < initialized.num_cmds_rows; m++)
+	    {
+	      //printf("the status is %d\n", initialized.status_table[m]);
+	      if (initialized.status_table[m] == 1) // runnable
+		{
+		  if (check_nth_command (&initialized, m) == 0)
+		    {
+		      initialized.status_table[m] = 3;
+		      printf("Command %d is now runnable\n", m);
+		    }
+		}
+	    }
+
+	  // try to run anyone who is ready
+	  int j = 0;
+	  for (j; j < initialized.num_cmds_rows; j++)
+	    {
+	      // If a given command is ready and num_threads < max limit, run it!
+	      if ((initialized.status_table[j] == 3) && (curr_num_threads < max_num_threads))
+		{
+		  
+		  // create thread, update thread key table + num of threads, update command status
+		  curr_num_threads++;
+		  int k = 0;
+		  for (k; k < max_num_threads; k++)
+		    {
+		      if (thread_cmd_running[b] == -1)
+			{
+			  thread_cmd_running[k] = j;
+			  pthread_create(&(threads[k]), NULL, run_thread, 0);
+			  initialized.status_table[j] = 2;
+			  break;
+			}
+		    }
+		} 
+	    }
+	} 
+    }
 }
 
-for(threadindex=0;threadindex<MAXTHREADS;threadindex++)
-{	
- pthread_join(tid[threadindex], (void**)&(retvals[threadindex]));
-}
+// status 1 = runnable, status 2 = running, status 3 = ready, status 0 = completed
 
- 
 /*
+
+typedef struct parallel_data parallel_data;
 struct parallel_data
   {
     int** dependency_table;  // the main dependency table
@@ -235,46 +338,33 @@ struct parallel_data
     int num_files_cols;  // number of columns/files
     int num_cmds_rows;  // number of rows/commands 
   };
+
+
 */
-if(completecheck(global_table)==0)
-{
-finished=1;
-}
 
-
-}
- // print_dependency_table(global_table);
- //print_command(global_command->command_array[1]);
-}
-
-int completecheck(parallel_data data)
+/*
+#include <p th re ad . h>
+void ∗ t h r e a d f u n c t i o n ( void ∗a r g )
 {
-// status 1 = runnable, status 2 = running,  status 0 = completed successfully, status -1 = unsuccessful
-int i=0;
-for(i=0;i<data.num_cmds_rows;i++)
+// Cast the parameter into what is needed .
+int ∗incoming = ( int ∗) a r g ;
+// Do whatever is necessary using * incoming as the argument .
+// The thread terminates when this function returns .
+return NULL;
+}
+int main ( void)
 {
-if(data.status_table[i]!=0)
-return -1;
+p t h r e a d t th re ad ID ;
+void ∗ e x i t s t a t u s ;
+int v al u e ;
+// Put something meaningful into value .
+v al u e = 4 2;
+// Create the thread , passing & value for the argument .
+p t h r e a d c r e a t e (& th read ID , NULL, t h r e a d f u n c ti o n , &v al u e ) ;
+// The main program continues while the thread executes .
+// Wait for the thread to terminate .
+p t h r e a d j o i n ( th read ID , &e x i t s t a t u s ) ;
+// Only the main thread is running now .
+return 0 ;
 }
-return 0;
-}
-
-
-void* parallelexecute(void *arg)
-{
-int i;
-for(i=0;i<global_table.num_cmds_rows;i++)
-{
-// status 1 = runnable, status 2 = running,  status 0 = completed successfully, status -1 = unsuccessful
-if(global_table.status_table[i]==1&&(check_nth_command(&global_table, i))==0)
-{
-global_table.status_table[i]=2;
-execute_command(global_command->command_array[i], 0);
-completed_nth_command(&global_table, i, 0);
-break;
-}
-}
-//We should never get here
-completed_nth_command(&global_table, i, -1);
-assert( !"Unreachable code hit" );
-}
+ */

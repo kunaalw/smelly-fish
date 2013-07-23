@@ -17,97 +17,28 @@
 #include <fcntl.h>			
 #include <sys/stat.h>
 
-typedef struct dep_pool dp;
-typedef struct fileindex fui;	
-typedef struct command_dependencies cmd_dep;
-dp *pool; //dependency pool
-/*
-command_dependencies* single_command_dependencies (command_t c)
+
+typedef struct parallel_data parallel_data;
+struct parallel_data
+  {
+    int** dependency_table;  // the main dependency table
+    char** file_reference_key;  // find index by name (use strcmp in a loop)
+    int* status_table;  // you know you are done when all the statuses are 0 (none should ever be -1)
+    int num_files_cols;  // number of columns/files
+    int num_cmds_rows;  // number of rows/commands 
+  };
+
+
+// Creates the dependency table
+parallel_data create_dependency_table (command_stream_t s)
 {
-command_dependencies *cd;
-cd = (command_dependencies *)malloc(sizeof(command_dependencies));
-cd->filecount=5;
-int i=0;
-for(i=0;i<5;i++)
-{
-cd->filelist[i]=(char*)malloc(50 * sizeof(char));
-strcpy(cd->filelist[i], "hello");
-}
-for(i=0;i<5;i++)
-{
-printf("%s", cd->filelist[i]);
-}
-
-
-return cd;
-}
-*/
-
- /*
-void timetravel(command_stream_t c)
-{
-	int cmd_count; //command count
-	cmd_count=c->num_commands;
-	pool = (dp *)malloc(sizeof(dp)); //FUI - file use index
-	pool->cmd_count=cmd_count;
-	pool->file_count=0;
-	int i=0;
-	int temp;
-command_dependencies tmp;
-		for(i=0;i<cmd_count;i++)
-{
-printf("gets to timetravel loop\n");
-tmp = single_command_dependencies (c->command_array[i]);
-temp=pool->file_count;
-pool->file_count=(temp+(tmp.num_files));
-start_pool (tmp.list_of_files, tmp.num_files, cmd_count);
-}
-
-printf("%d", cmd_count);
-//error(1, 0, "Timetravel not yet implemented");
-}
-
-
-//Start pool of dependencies
-void start_pool (char ** files, int filecount, int cmd_count)
-{
-fui *head = (fui *)malloc(sizeof(fui)); //FUI - file use index
-pool->wordlist = head;
-int * numcommands = (int*)malloc(sizeof(int)*cmd_count);
-head->depcheck=numcommands;
-printf("gets here start_pool\n");
-//return;
-}
-
-//Add to pool of dependencies
-void add_dependencies (char** word, int index, int numfiles)
-{
-//return;
-}
-
-//After a thread finishes running, remove its files from list of dependencies
-void remove_dependencies (int count)
-{
-//return;
-}
-
-//return 0 for false and 1 for true if a command has dependencies in pool
-int checkdependencies (char** word, int index)
-{
-return 0;
-}
-*/
-
-
-void timetravel(command_stream_t s)
-{ 
-  if (s == NULL) return;
-  if (s->num_commands == 0) return;
+  if (s == NULL) exit;
+  if (s->num_commands == 0) exit;
 
   int size_of_file_array = 0;
   char** array_of_file_indices = (char**) checked_malloc(size_of_file_array*sizeof(char*));
   
-  int commands_status [s->num_commands]; // status 1 = live, status 0 = completed successfully, status -1 = unsuccessful
+  int commands_status [s->num_commands]; // status 1 = runnable, status 2 = running,  status 0 = completed successfully, status -1 = unsuccessful
   int populate_status = 0;
   for (populate_status; populate_status < s->num_commands; populate_status++)
     commands_status[populate_status] = 1;
@@ -129,7 +60,7 @@ void timetravel(command_stream_t s)
 	    {
 	      if (strcmp(curr_dependency_retval.list_of_files[j], array_of_file_indices[k]) == 0)
 		{
-		  printf("The file '%s' is already present... and is saved as %s\n", curr_dependency_retval.list_of_files[j], array_of_file_indices[k]);
+		  //printf("The file '%s' is already present... and is saved as %s\n", curr_dependency_retval.list_of_files[j], array_of_file_indices[k]);
 		  already_added_flag = 1;
 		}
 	    }
@@ -145,7 +76,15 @@ void timetravel(command_stream_t s)
     }
 
   // Make 2x2 array and populate it with all zeroes
-  int dependency_table[s->num_commands][size_of_file_array];
+  int* values = (int*) calloc((s->num_commands)*(size_of_file_array), sizeof(int));
+  int** dependency_table = (int**) checked_malloc(s->num_commands*sizeof(int*));
+  int setit = 0;
+  for (setit; setit < s->num_commands; setit++)
+    {
+      dependency_table[setit] = values + (setit*size_of_file_array);
+    }
+
+  //int dependency_table[s->num_commands][size_of_file_array];
   int row_init = 0;
   for (row_init; row_init < s->num_commands; row_init++)
     {
@@ -156,28 +95,7 @@ void timetravel(command_stream_t s)
 	}
     }
 
-  /*
-   // Test - print table
-  int q = 0;
-  int t = 0;
-  printf("\n\n*** DEPENDENCY TABLE ***\n");
-  for (t; t < size_of_file_array; t++)
-    {
-      printf(" ~%s~ ", array_of_file_indices[t]);
-    }
-  printf("\n");
-  for (q; q < (s->num_commands); q++)
-    {
-      int r = 0;
-      for (r; r < size_of_file_array; r++)
-	{
-	  printf(" %d ", dependency_table[q][r]);
-	}
-      printf("\n");
-    }
-  */
-
-  printf("Number of files is %d\n", size_of_file_array);
+  // printf("Number of files is %d\n", size_of_file_array);
 
   // Fill in table properly
   int m = 0; 
@@ -201,33 +119,58 @@ void timetravel(command_stream_t s)
 	    }
 	}
     }
-  
-  // Test - print table
+
+  parallel_data ret_data;
+  ret_data.dependency_table = dependency_table;
+  ret_data.file_reference_key = array_of_file_indices;
+  ret_data.status_table = commands_status;
+  ret_data.num_files_cols = size_of_file_array;
+  ret_data.num_cmds_rows = s->num_commands;
+
+  return ret_data;
+}
+
+// Prints dependency table (for debugging)
+void print_dependency_table (parallel_data initialized)
+{
   int q = 0;
   int t = 0;
   printf("\n\n*** DEPENDENCY TABLE ***\n");
-  for (t; t < size_of_file_array; t++)
+  for (t; t < initialized.num_files_cols; t++)
     {
-      printf(" ~%s~ ", array_of_file_indices[t]);
+      printf(" ~%s~ ", initialized.file_reference_key[t]);
     }
   printf("\n");
-  for (q; q < (s->num_commands); q++)
+  for (q; q < (initialized.num_cmds_rows); q++)
     {
       int r = 0;
-      for (r; r < size_of_file_array; r++)
+      for (r; r < initialized.num_files_cols; r++)
 	{
-	  printf(" %d ", dependency_table[q][r]);
+	  printf(" %d ", initialized.dependency_table[q][r]);
 	}
       printf("\n");
     }
-  
 }
 
-/*
-typedef struct command_dependencies command_dependencies;
-struct command_dependencies
-  {
-    char **list_of_files;
-    int num_files;
-  };
- */
+void completed_nth_command (parallel_data* in_data, int cmd_completed, int complete_status)
+{
+  if (cmd_completed > in_data->num_cmds_rows || cmd_completed < 0)  error (1, 0, "ERROR: bad update value given to dependency table");
+ 
+  int i = 0;
+  for (i; i < in_data->num_files_cols; i++)
+    {
+      in_data->dependency_table[cmd_completed][i] = 0;
+    }
+  
+  in_data->status_table[cmd_completed] = complete_status;
+}
+
+
+void timetravel(command_stream_t s)
+{ 
+  if (s == NULL) return;
+  if (s->num_commands == 0) return;
+
+  parallel_data initialized = create_dependency_table(s);
+  print_dependency_table(initialized);
+}

@@ -190,11 +190,13 @@ int check_nth_command (parallel_data* in_data, int cmd_to_check)
 
 
 // Function called when thread is spawned
-void* run_thread (void* argvoid)
+void* run_thread (void* argument)
 {
-  command_t* argpoint = (command_t*) argvoid;
-  command_t argreal = *argpoint;
-  execute_command(argreal, 0);
+  command_t* foo = (command_t*) (argument);
+  //printf("   -- SUB-STATUS: Command execution started\n");
+  if (foo == NULL) error (1, 0, "ERROR: Thread given null pointer");
+  else execute_command(*foo, 0);
+  //printf("   -- SUB-STATUS: Command execution completed\n");
   return NULL;
 }
 
@@ -226,9 +228,10 @@ void timetravel(command_stream_t s)
   if (s->num_commands == 0) return;
 
   parallel_data initialized = create_dependency_table(s);
+  command_t* command_list = s->command_array;
 
-  printf(" -- STATUS: Dependency table created\n");
-  print_dependency_table(initialized);
+  //printf(" -- STATUS: Dependency table created\n");
+  //print_dependency_table(initialized);
 
   int exit_check = 0;
   int curr_num_threads = 0;
@@ -243,13 +246,14 @@ void timetravel(command_stream_t s)
 	  // if this was actually a command, update dependency table and status
 	  if (thread_cmd_running[b] != -1 && check_thread_status(threads[b]) == 0)
 	    {
+	      //printf(" -- STATUS: Thread with command %d is dead\n", thread_cmd_running[b]);
 	      int cmd_completed = thread_cmd_running[b];
 	      completed_nth_command (&initialized, cmd_completed, 0);
 	      thread_cmd_running[b] = -1;
+	      curr_num_threads--;
 	    }
-	  else b++;
 	}
-      curr_num_threads = b;
+      //curr_num_threads = b;
 
       //printf(" -- STATUS: Completed thread checking complete\n");
       // Check status
@@ -293,78 +297,40 @@ void timetravel(command_stream_t s)
 		  if (check_nth_command (&initialized, m) == 0)
 		    {
 		      initialized.status_table[m] = 3;
-		      printf("Command %d is now runnable\n", m);
+		      //printf(" -- STATUS: Command %d is now runnable\n", m);
 		    }
 		}
 	    }
 
-	  // try to run anyone who is ready
+	  // Try to run anyone who is ready
 	  int j = 0;
 	  for (j; j < initialized.num_cmds_rows; j++)
 	    {
 	      // If a given command is ready and num_threads < max limit, run it!
 	      if ((initialized.status_table[j] == 3) && (curr_num_threads < max_num_threads))
 		{
-		  
+		  //printf(" -- STATUS: Attempting to run command %d\n", j);
 		  // create thread, update thread key table + num of threads, update command status
 		  curr_num_threads++;
 		  int k = 0;
 		  for (k; k < max_num_threads; k++)
 		    {
-		      if (thread_cmd_running[b] == -1)
+		      if (thread_cmd_running[k] == -1)
 			{
+			  //printf(" -- STATUS: Command %d is assigned thread %d\n", j, k);
 			  thread_cmd_running[k] = j;
-			  pthread_create(&(threads[k]), NULL, run_thread, 0);
+			  command_t* in_cmd = &(command_list[j]);
+			  pthread_create(&(threads[k]), NULL, run_thread, in_cmd);
 			  initialized.status_table[j] = 2;
 			  break;
 			}
 		    }
 		} 
 	    }
-	} 
+	}
     }
+    void *exit_status;
+    int endlp = 0;
+    for (endlp; endlp < max_num_threads; endlp++)
+      pthread_join (threads[endlp], &exit_status);
 }
-
-// status 1 = runnable, status 2 = running, status 3 = ready, status 0 = completed
-
-/*
-
-typedef struct parallel_data parallel_data;
-struct parallel_data
-  {
-    int** dependency_table;  // the main dependency table
-    char** file_reference_key;  // find index by name (use strcmp in a loop)
-    int* status_table;  // you know you are done when all the statuses are 0 (none should ever be -1)
-    int num_files_cols;  // number of columns/files
-    int num_cmds_rows;  // number of rows/commands 
-  };
-
-
-*/
-
-/*
-#include <p th re ad . h>
-void ∗ t h r e a d f u n c t i o n ( void ∗a r g )
-{
-// Cast the parameter into what is needed .
-int ∗incoming = ( int ∗) a r g ;
-// Do whatever is necessary using * incoming as the argument .
-// The thread terminates when this function returns .
-return NULL;
-}
-int main ( void)
-{
-p t h r e a d t th re ad ID ;
-void ∗ e x i t s t a t u s ;
-int v al u e ;
-// Put something meaningful into value .
-v al u e = 4 2;
-// Create the thread , passing & value for the argument .
-p t h r e a d c r e a t e (& th read ID , NULL, t h r e a d f u n c ti o n , &v al u e ) ;
-// The main program continues while the thread executes .
-// Wait for the thread to terminate .
-p t h r e a d j o i n ( th read ID , &e x i t s t a t u s ) ;
-// Only the main thread is running now .
-return 0 ;
-}
- */

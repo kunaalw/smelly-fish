@@ -33,7 +33,7 @@ This is key in the pipe function as we shall see
 #include <stdlib.h>  
 #include <error.h>
 #include <errno.h>
-
+#include "alloc.h"
 #include <fcntl.h>			
 #include <sys/stat.h>
 
@@ -212,7 +212,8 @@ c->u.word[4]=NULL;
 */
  //       printf( " Word is: %s\n", c->u.word[0] );
    const char s[2] = " ";
-   char temp[100];
+   char* temp = (char*) checked_malloc(sizeof(char)*(strlen(c->u.word[0])+1));
+   //char temp[100];
    char *token;
    /*copy the word*/
    strcpy (temp, c->u.word[0]);

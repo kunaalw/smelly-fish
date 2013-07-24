@@ -213,7 +213,7 @@ int check_thread_status (pthread_t in_thread)
 void timetravel(command_stream_t s)
 {
   // The maximum number of threads that can exist at a given time
-  int max_num_threads = 6;
+  int max_num_threads = 60;
 
   pthread_t threads[max_num_threads];
   int thread_cmd_running[max_num_threads];

@@ -787,6 +787,7 @@ int main(int argc, char *argv[])
 	tracker_task = start_tracker(tracker_addr, tracker_port);
 	listen_task = start_listen();
 	register_files(tracker_task, myalias);
+	    
 
 	if (parallel_mode == 1)
 	  {
@@ -888,7 +889,7 @@ int main(int argc, char *argv[])
 	    //  +-------------------+
 	    //  | UPLOAD (PARALLEL) |
 	    //  +-------------------+
-	    
+
 	    // Thread counters
 	    int num_up_threads = 0;
 	    int max_up_threads = 16;
@@ -896,7 +897,7 @@ int main(int argc, char *argv[])
 	    int thread_up_live_check[max_up_threads];
 	    int n = 0;
 	    
-	    for (n; n < max_up_threads; i++)
+	    for (n; n < max_up_threads; n++)
 	      {
 		thread_up_live_check[n] = 0;
 	      }
@@ -974,12 +975,6 @@ int main(int argc, char *argv[])
 
 	else
 	  {
-	    printf("SERIAL\n\n");
-	    // Connect to the tracker and register our files.
-	    tracker_task = start_tracker(tracker_addr, tracker_port);
-	    listen_task = start_listen();
-	    register_files(tracker_task, myalias);
-	    
 	    // First, download files named on command line.
 	    for (; argc > 1; argc--, argv++)
 	      if ((t = start_download(tracker_task, argv[1])))
@@ -989,6 +984,6 @@ int main(int argc, char *argv[])
 	    while ((t = task_listen(listen_task)))
 	      task_upload(t); 
 	  }
-	
+
 	return 0;
 }

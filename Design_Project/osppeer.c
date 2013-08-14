@@ -22,12 +22,17 @@
 #include <limits.h>
 #include "md5.h"
 #include "osp2p.h"
+#include "keygen.h"
+
+#include <pthread.h>
+
 
 int evil_mode;			// nonzero iff this peer should behave badly
+int parallel_mode = 1;  // 1 to upload/download parallely, 0 to do this sequentially 
 
 static struct in_addr listen_addr;	// Define listening endpoint
 static int listen_port;
-
+const char *myalias;
 
 /*****************************************************************************
  * TASK STRUCTURE
@@ -67,12 +72,26 @@ typedef struct task {
 	char filename[FILENAMESIZ];	// Requested filename
 	char disk_filename[FILENAMESIZ]; // Local filename (TASK_DOWNLOAD)
 
+	peer_t my_data;
+	int my_data_init;
+
 	peer_t *peer_list;	// List of peers that have 'filename'
 				// (TASK_DOWNLOAD).  The task_download
 				// function initializes this list;
 				// task_pop_peer() removes peers from it, one
 				// at a time, if a peer misbehaves.
 } task_t;
+
+
+
+// Passed as an argument to the parallel downloader function
+typedef struct parallel_down_data 
+{
+  task_t *t;
+  task_t *tracker_task;
+} 
+  parallel_down_data;
+
 
 
 // task_new(type)
@@ -437,16 +456,16 @@ static void register_files(task_t *tracker_task, const char *myalias)
 //	A peer specification looks like "PEER [alias] [addr]:[port]".
 static peer_t *parse_peer(const char *s, size_t len)
 {
-	peer_t *p = (peer_t *) malloc(sizeof(peer_t));
-	if (p) {
-		p->next = NULL;
-		if (osp2p_snscanf(s, len, "PEER %s %I:%d",
-				  p->alias, &p->addr, &p->port) >= 0
-		    && p->port > 0 && p->port <= 65535)
-			return p;
-	}
-	free(p);
-	return NULL;
+  peer_t *p = (peer_t *) malloc(sizeof(peer_t));
+  if (p) {
+    p->next = NULL;
+    if (osp2p_snscanf(s, len, "PEER %s %I:%d",
+		      p->alias, &p->addr, &p->port) >= 0
+	&& p->port > 0 && p->port <= 65535)
+      return p;
+  }
+  free(p);
+  return NULL;
 }
 
 
@@ -493,6 +512,109 @@ task_t *start_download(task_t *tracker_task, const char *filename)
  exit:
 	return t;
 }
+
+
+//******************************************
+//           public_key_download
+//******************************************
+static void public_key_download (task_t *t)
+{
+	int i, ret = -1;
+	assert(!t || t->type == TASK_DOWNLOAD);
+
+	// Quit if no peers, and skip this peer
+	if (!t || !t->peer_list) 
+	{
+		error("* No peers are willing to serve '%s'\n", (t ? t->filename : "that file"));
+		task_free(t);
+		return;
+	} 
+	else if (t->peer_list->addr.s_addr == listen_addr.s_addr && t->peer_list->port == listen_port)
+	{
+		error("* Error point 534 '%s'\n", (t ? t->filename : "that file"));
+		task_free(t);
+		return;
+	}
+
+
+	message("* Connecting to %s:%d to download '%s'\n",
+	inet_ntoa(t->peer_list->addr), t->peer_list->port, t->filename);
+	t->peer_fd = open_socket(t->peer_list->addr, t->peer_list->port);
+
+	if (t->peer_fd == -1) 
+	{
+		error("* Cannot connect to peer: %s\n", strerror(errno));
+		task_free(t);
+		return;
+	}
+	osp2p_writef(t->peer_fd, "GET %s OSP2P\n", t->filename);
+	
+	// Save the public key of downloader as the following
+	char unique_fd[10];	
+	int len = sprintf(unique_fd, "%d", t->peer_fd);
+
+	int length_of_key_file_name = (len+14+1);
+
+	char* key_file_name;
+	key_file_name = (char*)malloc(length_of_key_file_name);
+	strcpy(key_file_name, "@SMELLY-FISH@");
+	
+	strcat(key_file_name, unique_fd);
+	key_file_name[length_of_key_file_name-1] = '\0';
+
+	// If the filename already exists, delete the old key and write the new key
+	remove(key_file_name);
+	strncpy(t->disk_filename, key_file_name, FILENAMESIZ); // !!!!!!!!!!! POTENTIAL FOR BUFFER OVERFLOW !!!!!!!!!!!!!
+	
+	// Open disk file for the result
+	t->disk_fd = open(t->disk_filename, O_WRONLY | O_CREAT | O_EXCL, 0666);
+	if (t->disk_fd == -1 && errno != EEXIST) 
+	{
+		error("* Cannot open local file");
+		return;
+	} 
+	else if (t->disk_fd != -1) 
+		message("* Saving public key to '%s'\n", t->disk_filename);
+
+	// Read the file into the task buffer from the peer,
+	// and write it from the task buffer onto disk.
+	while (1) 
+	{
+		int ret = read_to_taskbuf(t->peer_fd, t);
+		if (ret == TBUF_ERROR) 
+		{
+			error("* Peer read error");
+			return;
+		} 
+		else if (ret == TBUF_END && t->head == t->tail)
+			break;
+
+		ret = write_from_taskbuf(t->disk_fd, t);
+		if (ret == TBUF_ERROR) 
+		{
+			error("* Disk write error");
+			return;
+		}
+	}
+
+	// Empty files are usually a symptom of some error.
+	if (t->total_written > 0) 
+	{
+		message("* Downloaded '%s' was %lu bytes long\n", t->disk_filename, (unsigned long) t->total_written);
+		free(key_file_name);
+		task_free(t);
+		return;
+	}
+	else 
+	{
+		message("* No public key found\n");
+		remove(t->disk_filename);
+		task_free(t);
+		return;
+	}
+}
+//******************************************
+
 
 
 // task_download(t, tracker_task)
@@ -620,6 +742,19 @@ static task_t *task_listen(task_t *listen_task)
 
 	t = task_new(TASK_UPLOAD);
 	t->peer_fd = fd;
+
+	if (listen_task->my_data_init != 1)
+	{
+		error("* Error 748");
+		return NULL;
+	}
+	else
+	{
+		strcpy(t->my_data.alias, listen_task->my_data.alias);
+		t->my_data.next = NULL;
+		t->my_data.port = listen_task->my_data.port;
+		t->my_data.addr = listen_task->my_data.addr;
+	}
 	return t;
 }
 
@@ -648,6 +783,46 @@ static void task_upload(task_t *t)
 		goto exit;
 	}
 	t->head = t->tail = 0;
+
+	//*************************************************************
+	if (strcmp(t->filename, "@SMELLY-FISH@RESERVED-PUBLIC-KEY") != 0)
+	{
+		// TRY TO GET THE PUBLIC KEY OF DOWNLOADER
+		char *s1, *s2;
+		task_t *key_down_t = NULL;
+		size_t messagepos;
+
+		if (!(key_down_t = task_new(TASK_DOWNLOAD))) 
+		{
+			error("* Error while allocating task");
+			goto exit;
+		}
+
+		// add the peer/the "downloader" = uploader of the key
+		key_down_t->peer_list = NULL;
+		//strcpy(key_down_t->filename, "@SMELLY-FISH@RESERVED-PUBLIC-KEY");
+		strcpy(key_down_t->filename, "cat5.jpg");
+
+		if (t->my_data_init != 1)
+		{
+			error("* No return address provided by asker");
+			goto exit;
+		}
+		else
+		{
+			peer_t *p = (peer_t *) malloc(sizeof(peer_t));
+			p->next = NULL;
+			strcpy(p->alias, t->my_data.alias);
+			p->port = t->my_data.port;
+			p->addr = t->my_data.addr;
+
+			key_down_t->peer_list = p;
+		}
+
+		public_key_download(key_down_t);
+	}
+	//*************************************************************
+
 
 	t->disk_fd = open(t->filename, O_RDONLY);
 	if (t->disk_fd == -1) {
@@ -680,6 +855,27 @@ static void task_upload(task_t *t)
 }
 
 
+void* thread_download(void *arg)
+{
+  parallel_down_data *in_data = (parallel_down_data*) arg;
+  strcpy(in_data->t->my_data.alias, myalias);
+  in_data->t->my_data.addr = listen_addr;
+  in_data->t->my_data.port = listen_port;
+  in_data->t->my_data.next = NULL;
+  in_data->t->my_data_init = 1;
+  
+  task_download(in_data->t, in_data->tracker_task);
+  return NULL;
+}
+
+void* thread_upload(void *arg)
+{
+  task_t **in_data = (task_t**) arg;
+  task_upload(*in_data);
+  return NULL;
+}
+
+
 // main(argc, argv)
 //	The main loop!
 int main(int argc, char *argv[])
@@ -688,8 +884,17 @@ int main(int argc, char *argv[])
 	struct in_addr tracker_addr;
 	int tracker_port;
 	char *s;
-	const char *myalias;
 	struct passwd *pwent;
+
+	// Generate key-pair
+	key_chain my_key_chain = keygen();
+	printf("\n[AUTH-DP] Key pair generated\n");
+	printf("\n%s\n", my_key_chain.key_public);
+	
+	FILE *fp;
+        fp=fopen("@SMELLY-FISH@RESERVED-PUBLIC-KEY", "w+");
+	fprintf(fp,"%s",my_key_chain.key_public);
+	fclose(fp);
 
 	// Default tracker is read.cs.ucla.edu
 	osp2p_sscanf("131.179.80.139:11111", "%I:%d",
@@ -757,17 +962,203 @@ int main(int argc, char *argv[])
 	tracker_task = start_tracker(tracker_addr, tracker_port);
 	listen_task = start_listen();
 	register_files(tracker_task, myalias);
+	    
 
-	// First, download files named on command line.
-	for (; argc > 1; argc--, argv++)
+	if (parallel_mode == 1)
+	  {
+	    //  +---------------------+
+	    //  | DOWNLOAD (PARALLEL) |
+	    //  +---------------------+
+	    
+	    // Thread counters
+	    int num_down_threads = 0;
+	    int max_down_threads = 16;
+	    
+	    int thread_live_check[max_down_threads];
+	    int i = 0;
+	    
+	    for (i; i < max_down_threads; i++)
+	      {
+		thread_live_check[i] = 0;
+	      }
+	    
+	    pthread_t thread_id[max_down_threads];
+	    
+	    // First, download files named on command line.
+	    for (; argc > 1; argc--, argv++)
+	      {
+		// If more downloads than threshold, wait until some complete
+		while (num_down_threads > max_down_threads)
+		  {
+		    int j = 0;
+		    for (j; j < max_down_threads; j++)
+		      {
+			if (thread_live_check[j] == 1)
+			  {
+			    if(pthread_kill(thread_id[j], 0) != 0)
+			      {
+				num_down_threads--;
+				thread_live_check[j] = 0;
+			      }
+			  }
+			else
+			  {
+			    printf("ERROR: There is an available thread; yet number of threads exceeds threshold\n");
+			  }
+		      }
+		  }
+		
+		// Clean-up dead threads and update liveness table
+		int k = 0;
+		for (k; k < max_down_threads; k++)
+		  {
+		    if (thread_live_check[k] == 1)
+		      {
+			if(pthread_kill(thread_id[k], 0) != 0)
+			  {
+			    num_down_threads--;
+			    thread_live_check[k] = 0;
+			  }
+		      }
+		  }
+		
+		// If something to download, create a new thread and download it!
 		if ((t = start_download(tracker_task, argv[1])))
-			task_download(t, tracker_task);
+		  {
+		    int l = 0;
+		    int token = -1;
+		    for (l; l < max_down_threads; l++)
+		      {
+			if (thread_live_check[l] == 0)
+			  {
+			    token = l;
+			    break;
+			  }
+		      }
+		    
+		    thread_live_check[token] = 1;
+		    num_down_threads++;
+		    
+		    parallel_down_data in_data;
+		    in_data.t = t;
+		    in_data.tracker_task = tracker_task;
+		    
+		    pthread_create(&(thread_id[token]), NULL, thread_download, &in_data);
+		  }
+	      }
+	    
+	    // Wait for all threads still running
+	    int m = 0;
+	    void *exit_status;
+	    for (m; m < max_down_threads; m++)
+	      {
+		if (thread_live_check[m] == 1)
+		  {
+		    pthread_join(thread_id[m], &exit_status);
+		    num_down_threads--;
+		    thread_live_check[m] = 0;
+		  }
+	      }
+	    
+	    
+	    //  +-------------------+
+	    //  | UPLOAD (PARALLEL) |
+	    //  +-------------------+
 
-	// Then accept connections from other peers and upload files to them!
-	while ((t = task_listen(listen_task)))
-	{
-	printf("yellow\n");
-		task_upload(t);
-	}
+	    // Thread counters
+	    int num_up_threads = 0;
+	    int max_up_threads = 16;
+	    
+	    int thread_up_live_check[max_up_threads];
+	    int n = 0;
+	    
+	    for (n; n < max_up_threads; n++)
+	      {
+		thread_up_live_check[n] = 0;
+	      }
+	    
+	    pthread_t thread_up_id[max_up_threads];
+	    
+	    // Then, accept connections from other peers and upload files to them!
+	    while ((t = task_listen(listen_task)))
+	      {
+		// If more uploads than threshold, wait until some complete
+		while (num_up_threads > max_up_threads)
+		  {
+		    int j = 0;
+		    for (j; j < max_up_threads; j++)
+		      {
+			if (thread_up_live_check[j] == 1)
+			  {
+			    if(pthread_kill(thread_up_id[j], 0) != 0)
+			      {
+				num_up_threads--;
+				thread_up_live_check[j] = 0;
+			      }
+			  }
+			else
+			  {
+			    printf("ERROR: There is an available thread; yet number of threads exceeds threshold\n");
+			  }
+		      }
+		  }
+		
+		// Clean-up dead threads and update liveness table
+		int k = 0;
+		for (k; k < max_up_threads; k++)
+		  {
+		    if (thread_up_live_check[k] == 1)
+		      {
+			if(pthread_kill(thread_up_id[k], 0) != 0)
+			  {
+			    num_up_threads--;
+			    thread_up_live_check[k] = 0;
+			  }
+		      }
+		  }
+		
+		// If something to upload, create a new thread and download it!
+		int l = 0;
+		int token = -1;
+		for (l; l < max_up_threads; l++)
+		  {
+		    if (thread_up_live_check[l] == 0)
+		      {
+			token = l;
+			break;
+		      }
+		  }
+		
+		thread_up_live_check[token] = 1;
+		num_up_threads++;
+		
+		pthread_create(&(thread_up_id[token]), NULL, thread_upload, &t);
+	      }
+	    
+	    // Wait for all threads still running
+	    int p = 0;
+	    for (p; p < max_up_threads; p++)
+	      {
+		if (thread_up_live_check[p] == 1)
+		  {
+		    pthread_join(thread_up_id[p], &exit_status);
+		    num_up_threads--;
+		    thread_up_live_check[p] = 0;
+		  }
+	      }
+	  }
+
+	else
+	  {
+	    // First, download files named on command line.
+	    for (; argc > 1; argc--, argv++)
+	      if ((t = start_download(tracker_task, argv[1])))
+		task_download(t, tracker_task);
+	    
+	    // Then accept connections from other peers and upload files to them!
+	    while ((t = task_listen(listen_task)))
+	      task_upload(t); 
+	  }
+
 	return 0;
 }

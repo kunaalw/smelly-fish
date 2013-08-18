@@ -22,15 +22,15 @@
 #include <limits.h>
 #include "md5.h"
 #include "osp2p.h"
-#include <pthread.h>
-#include <sys/wait.h>
 
-int evil_mode = 0;			// nonzero iff this peer should behave badly
-int parallel_mode = 1;
+#include <pthread.h>
+
+
+int evil_mode;			// nonzero iff this peer should behave badly
+int parallel_mode = 1;  // 1 to upload/download parallely, 0 to do this sequentially 
 
 static struct in_addr listen_addr;	// Define listening endpoint
 static int listen_port;
-
 
 
 /*****************************************************************************
@@ -80,7 +80,6 @@ typedef struct task {
 
 
 
-
 // Passed as an argument to the parallel downloader function
 typedef struct parallel_down_data 
 {
@@ -88,8 +87,6 @@ typedef struct parallel_down_data
   task_t *tracker_task;
 } 
   parallel_down_data;
-
-
 
 
 
@@ -534,16 +531,6 @@ static void task_download(task_t *t, task_t *tracker_task)
 		   && t->peer_list->port == listen_port)
 		goto try_again;
 
-	if (evil_mode == 2)
-	{
-		while(1)
-		{
-			t->peer_fd = open_socket(t->peer_list->addr, t->peer_list->port);
-			osp2p_writef(t->peer_fd, "GET %s OSP2P\n", t->filename);
-		}
-	}
-
-
 	// Connect to the peer and write the GET command
 	message("* Connecting to %s:%d to download '%s'\n",
 		inet_ntoa(t->peer_list->addr), t->peer_list->port,
@@ -553,21 +540,6 @@ static void task_download(task_t *t, task_t *tracker_task)
 		error("* Cannot connect to peer: %s\n", strerror(errno));
 		goto try_again;
 	}
-	
-	if (evil_mode == 3)
-	{
-		int evil_name_size = 50000;
-		char evil_name[evil_name_size];
-		int evil_i;
-		for (evil_i = 0; evil_i < evil_name_size; evil_i++)
-			evil_name[evil_i] = 'x';
-		osp2p_writef(t->peer_fd, "GET %s OSP2P\n", evil_name);
-	}
-	
-	if (evil_mode == 4)
-		osp2p_writef(t->peer_fd, "GET %s OSP2P\n", "/etc/passwd");
-	
-
 	osp2p_writef(t->peer_fd, "GET %s OSP2P\n", t->filename);
 
 	// Open disk file for the result.
@@ -686,22 +658,11 @@ static void task_upload(task_t *t)
 	}
 
 	assert(t->head == 0);
-
-
-	if (strlen(t->buf) > FILENAMESIZ)
-	{
-		error("* File name is too large. Only file names < %d allowed\n", FILENAMESIZ);
-		goto exit;
-	} 
-
-
 	if (osp2p_snscanf(t->buf, t->tail, "GET %s OSP2P\n", t->filename) < 0) {
 		error("* Odd request %.*s\n", t->tail, t->buf);
 		goto exit;
 	}
 	t->head = t->tail = 0;
-
-	//if (t->filename[0] == " 
 
 	t->disk_fd = open(t->filename, O_RDONLY);
 	if (t->disk_fd == -1) {
@@ -710,16 +671,6 @@ static void task_upload(task_t *t)
 	}
 
 	message("* Transferring file %s\n", t->filename);
-
-	// WHEN THOU ART EVIL AND A PEER DOTH ASKETH YOU FOR A FILE, SEND 'EM BEEZEES INFINITE JUNK!! - DoS (DESIGN LAB EXTRA CREDIT)
-	if (evil_mode == 1)
-	{
-		while (1)
-		{
-			osp2p_writef(t->peer_fd, "smellyfish");
-		}
-	}
-
 	// Now, read file from disk and write it to the requesting peer.
 	while (1) {
 		int ret = write_from_taskbuf(t->peer_fd, t);
@@ -744,7 +695,6 @@ static void task_upload(task_t *t)
 }
 
 
-
 void* thread_download(void *arg)
 {
   parallel_down_data *in_data = (parallel_down_data*) arg;
@@ -758,7 +708,6 @@ void* thread_upload(void *arg)
   task_upload(*in_data);
   return NULL;
 }
-
 
 
 // main(argc, argv)
@@ -838,16 +787,8 @@ int main(int argc, char *argv[])
 	tracker_task = start_tracker(tracker_addr, tracker_port);
 	listen_task = start_listen();
 	register_files(tracker_task, myalias);
+	    
 
-	// Common process_id - can do uploads and downloads in parallel
-	pid_t process_id;
-	
-	// Connect to the tracker and register our files.
-	tracker_task = start_tracker(tracker_addr, tracker_port);
-	listen_task = start_listen();
-	register_files(tracker_task, myalias);
-	
-	
 	if (parallel_mode == 1)
 	  {
 	    //  +---------------------+

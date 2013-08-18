@@ -30,7 +30,7 @@ int parallel_mode = 1;
 
 static struct in_addr listen_addr;	// Define listening endpoint
 static int listen_port;
-
+size_t MAXFILSIZ = 2147483647;	// ~4GB
 
 
 /*****************************************************************************
@@ -41,6 +41,7 @@ static int listen_port;
 
 #define TASKBUFSIZ	4096	// Size of task_t::buf
 #define FILENAMESIZ	256	// Size of task_t::filename
+
 
 typedef enum tasktype {		// Which type of connection is this?
 	TASK_TRACKER,		// => Tracker connection
@@ -599,6 +600,13 @@ static void task_download(task_t *t, task_t *tracker_task)
 	// Read the file into the task buffer from the peer,
 	// and write it from the task buffer onto disk.
 	while (1) {
+		if (t->total_written > MAXFILSIZ)
+		{
+			error("* File too large. Update MAXFILSIZ if the file is legitimately this large\n");
+			task_free(t);
+			unlink(t->disk_filename);
+			return;
+		}
 		int ret = read_to_taskbuf(t->peer_fd, t);
 		if (ret == TBUF_ERROR) {
 			error("* Peer read error");
@@ -687,13 +695,12 @@ static void task_upload(task_t *t)
 
 	assert(t->head == 0);
 
-
-	if (strlen(t->buf) > FILENAMESIZ)
+	// Fix buffer overflow problem
+	if (strlen(t->buf) > (FILENAMESIZ + 10))
 	{
 		error("* File name is too large. Only file names < %d allowed\n", FILENAMESIZ);
 		goto exit;
 	} 
-
 
 	if (osp2p_snscanf(t->buf, t->tail, "GET %s OSP2P\n", t->filename) < 0) {
 		error("* Odd request %.*s\n", t->tail, t->buf);
@@ -701,13 +708,23 @@ static void task_upload(task_t *t)
 	}
 	t->head = t->tail = 0;
 
-	//if (t->filename[0] == " 
+	// Fix access to un-shared files problem
+	if (  (t->filename[0] == '/') 
+           || ((t->filename[0] == '.') && (t->filename[1] == '.')) 
+           || ((t->filename[0] == '~') && ((t->filename[1] == ' ') || (t->filename[1] == '/')))
+	   )
+	{
+		error("* Downloading peer attempting to access files outside shared folder. Illegal operation!\n");
+		goto exit;		
+	}
 
 	t->disk_fd = open(t->filename, O_RDONLY);
 	if (t->disk_fd == -1) {
 		error("* Cannot open file %s", t->filename);
 		goto exit;
 	}
+
+
 
 	message("* Transferring file %s\n", t->filename);
 

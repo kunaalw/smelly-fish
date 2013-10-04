@@ -1,2 +1,0 @@
-Command is: SIMPLE_COMMAND
-Command is: SIMPLE_COMMAND

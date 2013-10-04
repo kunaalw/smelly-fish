@@ -53,7 +53,6 @@ Notes:
    These contain execution functions for individual types of commands and their prototypes in the header
  * Made changes to the makefile to accommodate the above changes
  
- 
 Lab 1c
 -------
  * Added 2 new files - timetravel.c and timetravel.h
